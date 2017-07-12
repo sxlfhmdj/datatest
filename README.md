@@ -63,6 +63,150 @@ GRANT ALL PRIVILEGES ON sale.* TO 'sale'@'%' IDENTIFIED BY '11112222' WITH GRANT
 
 
 ### 2、Spring Boot整合多数据源自动切换（MySql）
+1. 通过本地线程，保证线程安全的前提下，保存线程的查找键（与数据源对应的key）。
+1. 通过AbstractRoutingDataSource（路由数据源），并实现方法determineCurrentLookupKey获取当前的数据源查找键。
+1. 对每个数据源声明定义DataSource（异名）
+1. 声明路由数据源DynamicDataSource（默认Primary），指定多数据源键值对，和默认数据源。
+1. 声明定义SqlSessionFactory和TransactionManagerment
+
+```
+/**
+ * Description: 【数据源类型Key】 <br/>
+ * Created on 10:14 2017/7/12 <br/>
+ *
+ * 这里的数据源和数据库是一对一的
+ * DatabaseType中的变量名称就是数据库的名称
+ */
+public enum DatabaseType {
+    etrade,
+    sale
+}
+```
+
+```
+/**
+ * Description: 【DatabaseType容器】 <br/>
+ * Created on 10:17 2017/7/12 <br/>
+ *
+ * 保存一个线程安全的DatabaseType容器
+ */
+public class DatabaseContextHolder {
+
+    private static final ThreadLocal<DatabaseType> contextHolder = new ThreadLocal<DatabaseType>();
+
+    public static void setDatabaseType(DatabaseType type){
+        contextHolder.set(type);
+    }
+
+    public static DatabaseType getDatabaseType(){
+        return contextHolder.get();
+    }
+}
+
+```
+
+
+```
+/**
+ * Description: 【动态数据源】 <br/>
+ * Created on 10:24 2017/7/12 <br/>
+ *
+ * 使用DatabaseContextHolder获取当前线程的DatabaseType
+ */
+public class DynamicDataSource extends AbstractRoutingDataSource {
+
+    protected Object determineCurrentLookupKey() {
+        return DatabaseContextHolder.getDatabaseType();
+    }
+}
+```
+
+
+
+```
+package org.xiaod.datatest.dynamic.config;
+
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.mybatis.spring.SqlSessionFactoryBean;
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceBuilder;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.xiaod.datatest.dynamic.common.datasource.DatabaseType;
+import org.xiaod.datatest.dynamic.common.datasource.DynamicDataSource;
+
+import javax.sql.DataSource;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Description: 【DynamicDatSource Config】 <br/>
+ * Created on 10:27 2017/7/12 <br/>
+ *
+ * 配置动态切换
+ *
+ */
+@Configuration
+@MapperScan(basePackages = "org.xiaod.datatest.dynamic.dao.etrade.iface", sqlSessionFactoryRef = "dynamicSqlSessionFactory")
+public class DynamicDataSourceConfig {
+
+    @Bean(name = "etradeDataSource")
+    @ConfigurationProperties(prefix = "spring.datasource.etrade")
+    public DataSource etradeDataSource(){
+        return DataSourceBuilder.create().build();
+    }
+
+    @Bean(name = "saleDataSource")
+    @ConfigurationProperties(prefix = "spring.datasource.sale")
+    public DataSource saleDataSource(){
+        return DataSourceBuilder.create().build();
+    }
+
+    @Bean(name = "dynamicDataSource")
+    @Primary
+    public DynamicDataSource dataSource(@Qualifier("etradeDataSource") DataSource etradeDataSource,
+                                        @Qualifier("saleDataSource") DataSource saleDataSource) {
+        Map<Object, Object> targetDataSources = new HashMap<Object, Object>();
+        targetDataSources.put(DatabaseType.etrade, etradeDataSource);
+        targetDataSources.put(DatabaseType.sale, saleDataSource);
+
+        DynamicDataSource dataSource = new DynamicDataSource();
+        dataSource.setTargetDataSources(targetDataSources);// 该方法是AbstractRoutingDataSource的方法
+        dataSource.setDefaultTargetDataSource(etradeDataSource);// 默认的datasource设置为etradeDataSource
+        return dataSource;
+    }
+
+    /**
+     * 根据数据源创建SqlSessionFactory
+     */
+    @Bean(name = "dynamicSqlSessionFactory")
+    @Primary
+    public SqlSessionFactory sqlSessionFactory(@Qualifier("dynamicDataSource") DynamicDataSource ds) throws Exception {
+        SqlSessionFactoryBean bean = new SqlSessionFactoryBean();
+        bean.setDataSource(ds);// 指定数据源(这个必须有，否则报错)
+        // 下边两句仅仅用于*.xml文件，如果整个持久层操作不需要使用到xml文件的话（只用注解就可以搞定），则不加
+        Resource[] mapperLocations= new PathMatchingResourcePatternResolver().getResources("classpath:org/xiaod/datatest/dynamic/dao/etrade/xml/*.xml");
+        bean.setMapperLocations(mapperLocations);
+        return bean.getObject();
+    }
+
+    /**
+     * 配置事务管理器
+     */
+    @Bean(name = "dynamicTransactionManager")
+    @Primary
+    public DataSourceTransactionManager transactionManager(@Qualifier("dynamicDataSource") DynamicDataSource dataSource) throws Exception {
+        return new DataSourceTransactionManager(dataSource);
+    }
+
+}
+```
 
 
 ### 3、Spring Boot处理多数据库事务
@@ -73,11 +217,14 @@ GRANT ALL PRIVILEGES ON sale.* TO 'sale'@'%' IDENTIFIED BY '11112222' WITH GRANT
 
 ### 5、参考资料
 - http://www.cnblogs.com/ityouknow/p/4977136.html
+spring boot多数据源
 - http://www.cnblogs.com/winner-0715/p/6687247.html
+spring boot数据库动态切换
 - http://www.cnblogs.com/java-zhao/p/5413845.html
 - http://www.cnblogs.com/java-zhao/p/5415896.html
+sharding
 - http://blog.csdn.net/bluishglc/article/details/6161475
-事务
+事务@Transaction
 - http://blog.csdn.net/uestc_lxp/article/details/50456721
 
 ### 6、笔记
