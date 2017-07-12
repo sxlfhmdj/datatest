@@ -209,12 +209,12 @@ public class DynamicDataSourceConfig {
 ```
 
 
-### 3、数据库的切分
+### 3、数据库的切分，分布式事务
 ①表的垂直切分
 ②表的水平切分
 
 
-### 4、Spring Boot处理多数据库事务
+### 4、Redis事务与管道
 
 ### 5、参考资料
 - http://www.cnblogs.com/ityouknow/p/4977136.html

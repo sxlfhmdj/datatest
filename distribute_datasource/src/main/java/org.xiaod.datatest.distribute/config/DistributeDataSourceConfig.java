@@ -1,43 +1,44 @@
 package org.xiaod.datatest.distribute.config;
 
+import com.atomikos.icatch.jta.UserTransactionImp;
+import com.atomikos.icatch.jta.UserTransactionManager;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceBuilder;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.jta.atomikos.AtomikosDataSourceBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.xiaod.datatest.dynamic.common.datasource.DatabaseType;
-import org.xiaod.datatest.dynamic.common.datasource.DynamicDataSource;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.jta.JtaTransactionManager;
+import org.xiaod.datatest.distribute.common.datasource.DatabaseType;
+import org.xiaod.datatest.distribute.common.datasource.DynamicDataSource;
 
 import javax.sql.DataSource;
-import javax.sql.XADataSource;
+import javax.transaction.TransactionManager;
+import javax.transaction.UserTransaction;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Description: 【DynamicDatSource Config】 <br/>
+ * Description: 【DistributeDatSource Config】 <br/>
  * Created on 10:27 2017/7/12 <br/>
  *
- * 配置动态切换
+ * 分布式事务管理器
  *
  */
 @Configuration
-@MapperScan(basePackages = "org.xiaod.datatest.dynamic.dao.etrade.iface", sqlSessionFactoryRef = "dynamicSqlSessionFactory")
-public class DynamicDataSourceConfig {
+@MapperScan(basePackages = {"org.xiaod.datatest.dynamic.dao.etrade.iface"}, sqlSessionFactoryRef = "dynamicSqlSessionFactory")
+public class DistributeDataSourceConfig {
 
     @Bean(name = "etradeDataSource")
     @ConfigurationProperties(prefix = "spring.datasource.etrade")
     public DataSource etradeDataSource(){
-        AtomikosDataSourceBean xaDataSource = new AtomikosDataSourceBean();
-
-        xaDataSource.setXaDataSource();
         return DataSourceBuilder.create().build();
     }
 
@@ -75,13 +76,28 @@ public class DynamicDataSourceConfig {
         return bean.getObject();
     }
 
-    /**
-     * 配置事务管理器
-     */
-    @Bean(name = "dynamicTransactionManager")
-    @Primary
-    public DataSourceTransactionManager transactionManager(@Qualifier("dynamicDataSource") DynamicDataSource dataSource) throws Exception {
-        return new DataSourceTransactionManager(dataSource);
+    @Bean(name = "userTransaction")
+    public UserTransaction userTransaction() throws Throwable {
+        UserTransactionImp userTransactionImp = new UserTransactionImp();
+        userTransactionImp.setTransactionTimeout(10000);
+        return userTransactionImp;
     }
+
+    @Bean(name = "atomikosTransactionManager", initMethod = "init", destroyMethod = "close")
+    public TransactionManager atomikosTransactionManager() throws Throwable {
+        UserTransactionManager userTransactionManager = new UserTransactionManager();
+        userTransactionManager.setForceShutdown(false);
+        return userTransactionManager;
+    }
+
+    @Bean(name = "transactionManager")
+    @DependsOn({ "userTransaction", "atomikosTransactionManager" })
+    public PlatformTransactionManager transactionManager() throws Throwable {
+        UserTransaction userTransaction = userTransaction();
+        JtaTransactionManager manager = new JtaTransactionManager(userTransaction, atomikosTransactionManager());
+        return manager;
+    }
+
+
 
 }

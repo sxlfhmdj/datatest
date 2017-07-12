@@ -27,7 +27,7 @@ import java.util.Map;
  *
  */
 @Configuration
-@MapperScan(basePackages = "org.xiaod.datatest.dynamic.dao.etrade.iface", sqlSessionFactoryRef = "dynamicSqlSessionFactory")
+@MapperScan(basePackages = {"org.xiaod.datatest.dynamic.dao.etrade.iface"}, sqlSessionFactoryRef = "dynamicSqlSessionFactory")
 public class DynamicDataSourceConfig {
 
     @Bean(name = "etradeDataSource")
