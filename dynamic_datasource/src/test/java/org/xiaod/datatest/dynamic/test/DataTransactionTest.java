@@ -41,6 +41,7 @@ public class DataTransactionTest {
 
     @Test
     public void testTransaction(){
+        DatabaseContextHolder.setDatabaseType(DatabaseType.sale);
         orderService.addOrder();
     }
 }

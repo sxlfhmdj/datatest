@@ -61,13 +61,17 @@ GRANT ALL PRIVILEGES ON etrade.* TO 'etrade'@'%' IDENTIFIED BY '11112222' WITH G
 GRANT ALL PRIVILEGES ON sale.* TO 'sale'@'%' IDENTIFIED BY '11112222' WITH GRANT OPTION;
 ```
 
-### 2、Spring Boot处理多数据库事务
+
+### 2、Spring Boot整合多数据源自动切换（MySql）
+
+
+### 3、Spring Boot处理多数据库事务
 
 
 
-### 3、Spring Boot处理数据库和Redis事务
+### 4、Spring Boot处理数据库和Redis事务
 
-### 4、参考资料
+### 5、参考资料
 - http://www.cnblogs.com/ityouknow/p/4977136.html
 - http://www.cnblogs.com/winner-0715/p/6687247.html
 - http://www.cnblogs.com/java-zhao/p/5413845.html
@@ -76,7 +80,9 @@ GRANT ALL PRIVILEGES ON sale.* TO 'sale'@'%' IDENTIFIED BY '11112222' WITH GRANT
 事务
 - http://blog.csdn.net/uestc_lxp/article/details/50456721
 
-### 5、笔记
+### 6、笔记
+使用多数据库最好把DataSourceAutoConfiguration屏蔽掉
+
 Transaction事务注解最好使用使用在类和实现方法上，不要使用在接口和接口方法上。只有对接口代理的时候，使用在接口和接口方法上的Transaction才生效
 Transaction事务注解只是针对类中的public方法生效，对于private和protected即使使用了也不会生效
 Transaction事务注解类中方法之间的调用事务不会起作用，只是对外部的调用才会起作用

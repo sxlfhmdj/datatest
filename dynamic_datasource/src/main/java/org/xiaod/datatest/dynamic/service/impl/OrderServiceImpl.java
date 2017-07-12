@@ -3,8 +3,6 @@ package org.xiaod.datatest.dynamic.service.impl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.xiaod.datatest.dynamic.common.datasource.DatabaseContextHolder;
-import org.xiaod.datatest.dynamic.common.datasource.DatabaseType;
 import org.xiaod.datatest.dynamic.dao.etrade.iface.OrderInfoMapper;
 import org.xiaod.datatest.dynamic.dao.etrade.mapper.OrderInfo;
 import org.xiaod.datatest.dynamic.service.OrderService;
@@ -22,13 +20,13 @@ public class OrderServiceImpl implements OrderService {
     @Transactional("dynamicTransactionManager")
     public void addOrder(){
         OrderInfo orderInfo = new OrderInfo();
-        orderInfo.setOrderId("20170710121208002");
+        orderInfo.setOrderId("20170710121208004");
         orderInfo.setOrderType("1");
         OrderInfo orderInfo1 = new OrderInfo();
-        orderInfo1.setOrderId("20170710121208001");
+        orderInfo1.setOrderId("20170710121208003");
         orderInfo.setOrderType("1");
-        DatabaseContextHolder.setDatabaseType(DatabaseType.etrade);
         orderInfoMapper.insert(orderInfo);
         orderInfoMapper.insert(orderInfo1);
+
     }
 }
