@@ -209,23 +209,26 @@ public class DynamicDataSourceConfig {
 ```
 
 
-### 3、Spring Boot处理多数据库事务
+### 3、数据库的切分
+①表的垂直切分
+②表的水平切分
 
 
-
-### 4、Spring Boot处理数据库和Redis事务
+### 4、Spring Boot处理多数据库事务
 
 ### 5、参考资料
 - http://www.cnblogs.com/ityouknow/p/4977136.html
-spring boot多数据源
+spring 多数据源
 - http://www.cnblogs.com/winner-0715/p/6687247.html
-spring boot数据库动态切换
+spring boot多数据源
 - http://www.cnblogs.com/java-zhao/p/5413845.html
+spring boot数据库动态切换
 - http://www.cnblogs.com/java-zhao/p/5415896.html
-sharding
+spring boot数据库动态切换AOP实现
 - http://blog.csdn.net/bluishglc/article/details/6161475
-事务@Transaction
+sharding
 - http://blog.csdn.net/uestc_lxp/article/details/50456721
+事务@Transaction
 
 ### 6、笔记
 使用多数据库最好把DataSourceAutoConfiguration屏蔽掉

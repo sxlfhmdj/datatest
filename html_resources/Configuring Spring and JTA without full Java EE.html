@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<!-- saved from url=(0082)https://spring.io/blog/2011/08/15/configuring-spring-and-jta-without-full-java-ee/ -->
+<html data-code-prettify="" data-mobile-support="" data-search=""><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Configuring Spring and JTA without full Java EE</title>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1, minimum-scale=1, user-scalable=no" id="Viewport" name="viewport">
+<link rel="shortcut icon" type="image/x-icon" href="https://spring.io/img/favicon-ca31b78daf0dd9a106bbf3c6d87d4ec7.png">
+<link href="./Configuring Spring and JTA without full Java EE_files/css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="./Configuring Spring and JTA without full Java EE_files/main-7d508c9e3a2dee2227a0f9f7fbec06d1.css">
+<script type="text/javascript" async="" src="./Configuring Spring and JTA without full Java EE_files/inpage_linkid.js.下载" id="undefined"></script><script type="text/javascript" async="" src="./Configuring Spring and JTA without full Java EE_files/ga.js.下载"></script><script src="./Configuring Spring and JTA without full Java EE_files/system-eccc019329febb5a1b06bde008ca5614.js.下载"></script>
+<script>
+    System.config({baseURL: "/9b4d78d"});
+  </script>
+<script src="./Configuring Spring and JTA without full Java EE_files/config-5a675c9cddea3a5f55b71416e67d47d6.js.下载"></script>
+<script>
+      System.import('app/main.js')
+  </script>
+<meta content="7qGntFPD9lWAVCtUu5U77v4l68PsTHf6xpzgjQv2j2M" name="google-site-verification">
+<script>
+    //
+      var _gaq = _gaq || [];
+      var pluginUrl =
+       '//www.google-analytics.com/plugins/ga/inpage_linkid.js';
+      _gaq.push(
+        ['_require', 'inpage_linkid', pluginUrl],
+        ['_setAccount', 'UA-2728886-20'],
+        ['_trackPageview'],
+        ['b._require', 'inpage_linkid', pluginUrl],
+        ['b._setAccount', 'UA-2728886-19'],
+        ['b._trackPageview']
+      );
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+  </script>
+<link href="./Configuring Spring and JTA without full Java EE_files/blog-bf1ffe11f0849abfd83468225ab53a8b.css" rel="stylesheet" type="text/css">
+ 
+<meta content="summary" name="twitter:card">
+<meta content="@springcentral" name="twitter:site">
+<meta name="twitter:title" content="Configuring Spring and JTA without full Java EE">
+<meta name="twitter:description" content="&lt;p&gt;Spring has rich support for transaction management through its &lt;code&gt;PlatformTransactionManager&lt;/code&gt; interface and the hierarchy of implementations. Spring’s transaction support provides a consistent interface for the transactional semantics of numerous APIs. Broadly, transactions can be split into two categories: local transactions and global transactions. Local transactions are those that affect only one transaction resource. Most often, these resources have their own transactional APIs, even if the notion of a transaction is not explicitly surfaced. Often it’s surfaced as the concept of a session, a unit of work with demarcating APIs to tell the resource when buffered work should be committed. Global transactions are those that span one or more transactional resources, and enlist them all in a single transaction.&lt;/p&gt;
+">
+<meta name="twitter:creator" content="@starbuxman">
+<meta name="twitter:image:src" content="https://gravatar.com/avatar/fb22593caf24e4bb4c98d467cdd247e6?s=200">
+ 
+<meta property="og:title" content="Configuring Spring and JTA without full Java EE">
+<meta property="og:image" content="https://gravatar.com/avatar/fb22593caf24e4bb4c98d467cdd247e6?s=200">
+<meta property="og:description" content="&lt;p&gt;Spring has rich support for transaction management through its &lt;code&gt;PlatformTransactionManager&lt;/code&gt; interface and the hierarchy of implementations. Spring’s transaction support provides a consistent interface for the transactional semantics of numerous APIs. Broadly, transactions can be split into two categories: local transactions and global transactions. Local transactions are those that affect only one transaction resource. Most often, these resources have their own transactional APIs, even if the notion of a transaction is not explicitly surfaced. Often it’s surfaced as the concept of a session, a unit of work with demarcating APIs to tell the resource when buffered work should be committed. Global transactions are those that span one or more transactional resources, and enlist them all in a single transaction.&lt;/p&gt;
+">
+<meta content="article" property="og:type">
+<meta property="og:article:published_time" content="2011-08-15 06:00:00.0">
+<script async="" src="./Configuring Spring and JTA without full Java EE_files/embed.js.下载"></script><script async="" src="./Configuring Spring and JTA without full Java EE_files/count.js.下载"></script><style type="text/css">/* This is not a zero-length file! */</style><style type="text/css">/* This is not a zero-length file! */</style><link rel="preload" as="style" href="https://c.disquscdn.com/next/embed/styles/lounge.e52b2f99308b09ef7684f62bab4d6f07.css"><link rel="preload" as="script" href="https://c.disquscdn.com/next/embed/common.bundle.d136eb961b3bb837afdc321c8f9da911.js"><link rel="preload" as="script" href="https://c.disquscdn.com/next/embed/lounge.bundle.746166ba395ae4549360d4ae6331217c.js"><link rel="preload" as="script" href="https://disqus.com/next/config.js"><script src="./Configuring Spring and JTA without full Java EE_files/count-data.js.下载"></script></head>
+<body style="-webkit-text-stroke: 0.5px;">
+<script type="text/javascript">
+    // Work around Google font rendering issues in webkit browsers on Windows 7
+    if (navigator.userAgent.indexOf("NT 6.1") != -1) {
+      document.body.style.WebkitTextStroke = "0.5px";
+    }
+  </script>
+<div class="viewport">
+<header class="navbar header--navbar desktop-only">
+<div class="navbar-inner">
+<div class="container-fluid">
+<div class="spring-logo--container">
+<a class="spring-logo" href="https://spring.io/"><span></span></a>
+</div>
+<ul class="nav pull-right">
+<li class="navbar-link">
+<a href="https://spring.io/docs">Docs</a>
+</li>
+<li class="navbar-link">
+<a href="https://spring.io/guides">Guides</a>
+</li>
+<li class="navbar-link">
+<a href="https://spring.io/projects">Projects</a>
+</li>
+<li class="navbar-link active">
+<a href="https://spring.io/blog">Blog</a>
+</li>
+<li class="navbar-link">
+<a href="https://spring.io/questions">Questions</a>
+</li>
+<li class="navbar-link nav-search">
+<i class="icon-search navbar-search--icon js-search-input-open"></i>
+<div class="search-input-close js-search-input-close">x</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="search-dropdown--container js-search-dropdown">
+<div class="container-fluid">
+<div class="search-form--container">
+<form action="https://spring.io/search" class="form-inline form-search" method="get">
+<input class="search-query search-form--form js-search-input" name="q" placeholder="Search for documentation, guides, and posts..." type="text" value="">
+<button class="search-form--submit" type="submit"><i class="icon-search"></i></button>
+</form>
+</div>
+</div>
+</div>
+</header>
+<div>
+<div class="mobile-navigation--wrapper mobile-only">
+<div class="navigation-drawer--container">
+<div class="mobile-search--container">
+<form action="https://spring.io/search" class="form-inline form-search" method="get">
+<button class="search-form--submit" type="submit"><i class="icon-search"></i></button>
+<input class="search-query search-form--form js-search-input" name="q" placeholder="Search..." type="text" value="">
+</form>
+</div>
+<div class="navigation-item-list">
+<div class="navbar-link">
+<a href="https://spring.io/">
+Home
+<i class="icon-chevron-right pull-right"></i>
+</a>
+</div>
+<div class="navbar-link">
+<a href="https://spring.io/docs">
+Docs
+<i class="icon-chevron-right pull-right"></i>
+</a>
+</div>
+<div class="navbar-link">
+<a href="https://spring.io/guides">
+Guides
+<i class="icon-chevron-right pull-right"></i>
+</a>
+</div>
+<div class="navbar-link">
+<a href="https://spring.io/projects">
+Projects
+<i class="icon-chevron-right pull-right"></i>
+</a>
+</div>
+<div class="navbar-link active">
+<a href="https://spring.io/blog">
+Blog
+<i class="icon-chevron-right pull-right"></i>
+</a>
+</div>
+<div class="navbar-link">
+<a href="https://spring.io/questions">
+Questions
+<i class="icon-chevron-right pull-right"></i>
+</a>
+</div>
+</div>
+</div>
+<div class="mobile-nav">
+<div class="nav-icon js-open-nav-drawer">
+<i class="icon-reorder"></i>
+</div>
+<div class="header-center-icon">
+<a href="https://spring.io/">
+<div class="icon icon-spring-logo-mobile"></div>
+</a>
+</div>
+</div>
+</div>
+</div>
+<div class="header--container"></div>
+<div class="container-fluid"></div>
+<div></div>
+<div class="container-fluid">
+<div class="main-body--wrapper">
+<div class="row-fluid blog--wrapper">
+<article class="span8 mobile-left-pane" id="content">
+<header class="desktop-only">
+<div class="blog-category active content--title">
+<div>Engineering</div>
+</div>
+<div class="blog-category content--title">
+<div>Releases</div>
+</div>
+<div class="blog-category content--title">
+<div>News and Events</div>
+</div>
+</header>
+<div class="blog--container">
+<header>
+<h1 class="blog--title">Configuring Spring and JTA without full Java EE</h1>
+<div class="meta-data--container">
+<div class="meta-data--item desktop-only">
+<div class="meta-data--icon icon blog-icon engineering"></div>
+<a class="category">Engineering</a>
+</div>
+<div class="meta-data--item">
+<img class="meta-data--icon" src="./Configuring Spring and JTA without full Java EE_files/fb22593caf24e4bb4c98d467cdd247e6">
+<a class="author" rel="author" href="https://spring.io/team/jlong">Josh Long</a>
+</div>
+<div class="meta-data--item">
+<div class="meta-data--icon icon blog-icon calendar"></div>
+<time class="date" pubdate="" datetime="2011-08-15 06:00:00.0">August 15, 2011</time>
+</div>
+<div class="meta-data--item">
+<div class="meta-data--icon icon blog-icon comments"></div>
+<a class="comments" data-disqus-identifier="429" href="https://spring.io/blog/2011/08/15/configuring-spring-and-jta-without-full-java-ee#disqus_thread">6 Comments</a></div>
+</div>
+</header>
+<div class="blog--post"><p>Spring has rich support for transaction management through its <code>PlatformTransactionManager</code> interface and the hierarchy of implementations. Spring’s transaction support provides a consistent interface for the transactional semantics of numerous APIs. Broadly, transactions can be split into two categories: local transactions and global transactions. Local transactions are those that affect only one transaction resource. Most often, these resources have their own transactional APIs, even if the notion of a transaction is not explicitly surfaced. Often it’s surfaced as the concept of a session, a unit of work with demarcating APIs to tell the resource when buffered work should be committed. Global transactions are those that span one or more transactional resources, and enlist them all in a single transaction.</p><p>A few common examples of local transactions are in the JMS and JDBC APIs. In JMS, a user can create a transacted Session, send and receive messages and, when the work on the message has completed, call <code>Session.commit()</code> to tell the server that it can finalize the work. In the database world, JDBC <code>Connection</code>s auto commit queries by default. This is fine for one-off statements, but usually it is preferable to collect several related statements into a batch and then commit all, or none, of them. In JDBC, you do this by first setting the <code>Connection</code>’s <code>setAutoCommit()</code> method to false, and then explicitly calling <code>Connection.commit()</code> at the end of the batch. Both of these APIs, and numerous others, provide the notion of a transactional unit-of-work which may be committed, finalized, flushed or otherwise made permanent at the client’s discretion. The APIs are wildly different, but the concepts are the same.</p><p>Global transactions a different beast altogether. You should use them anytime you want to let multiple resources participate in a transaction. This is sometimes a requirement: perhaps you want to send a JMS message and write to the database? Or, perhaps you want to use two different persistence contexts with JPA? In global transaction setups, a third party transaction monitor enlists multiple transactional resources in a transaction, prepares them for the commit – in this stage the resource usually does the equivalent of a dry-run commit – and then, finally, commit each of the resources. These steps underlie most global transaction implementations and is called two-phase commit (2PC). If one commit fails (because of causes not present when they prepared for the commit, like a network outage), then the transaction monitor asks each of the resources to undo, or rollback, the last transaction.</p><p>Global transactions are markedly more complex than regular, local transactions because they must, by definition, involve a third party agent whose sole function is to arbitrate transaction state between several transactional resources. The transaction monitor must also know how to talk to each of the transactional resources. Because this agent must also keep state – after all, the individual transactional resources can’t be trusted to know what other resources are doing – it has durability requirements and synchronization costs to keep a consistent transaction log, very much like a database. When something catastrophic occurs, and the transaction monitor is shut down, then it must be able to start up and replay the in-flight transactions to ensure that all resources are in a consistent state with respect to any interrupted transactions. To communicate with the transactional resources, the transaction monitor must speak a common protocol with transactional resources. Usually, this protocol is a specification called XA.</p><p>In the enterprise Java world, the typical way to add XA to an application is to use JTA. The Java Transaction API (JTA) is a specification that describes a standard global transaction monitor API for users. You may use the JTA API to work with global transactions in a standard way for the resource types that support it - commonly just JDBC and JMS. Java EE application servers support JTA out of the box, and there are third party, standalone implementations of JTA that you can use to avoid being trapped on a Java EE application server.</p><p>To use JTA, you need to make a very specific choice to employ it in your transactional code because the API is very different from the transactional API exposed by JDBC, which in turn has a very different API than JMS does.</p><p>It is very common to see older code that is written against the JTA APIs, even if only one resource is involved, because at least it won’t have to be completely rewritten to take advantage of XA if it’s later required. This is usually a regrettable, but understandable decision. Code written in this way was unfortunately also often tied to the container; it would not work unless JNDI and all the sever machinery were running to bootstrap the transaction monitor and JNDI servers. </p><p><strong>Fortunately, this complexity can be elegantly avoided by using Spring.</strong></p>
+<h2>Spring's Transaction Support</h2><p>The first part of any solution to this sorry state of affairs is the Spring <code>PlatformTransactionManager</code> API and the associated transaction management APIs in the Spring framework. The Spring framework and surrounding projects provide a rich selection of <code>PlatformTransactionManager</code> implementations, supporting local transactions in JDBC, JMS, Gemfire, AMQP, Hibernate, JPA, JDO, iBatis, and many others.</p>
+<div align="center"><img src="./Configuring Spring and JTA without full Java EE_files/TransactionClassHierarchy.png" alt="Spring Transaction Class Hierarchy" title="TransactionClassHierarchy" width="499" height="357"></div><p>The Spring framework also provides the <code>TransactionTemplate</code>, which works with a <code>PlatformTransactionManager</code> implementation and can be used to automatically enclose a unit of work in a transaction so that you don’t even need to know about the <code>PlatformTransactionManager</code> API itself, and so that the usage contract of the <code>PlatformTransactionManager</code> is satisfied: the transaction will be correctly started, executed, prepared and committed, and - if an exception is thrown during processing, the transaction will be rolled back.</p>
+<pre class="prettyprint"><code class="prettyprint java"><br><span class="lit">@Inject</span><span class="pln"> </span><span class="kwd">private</span><span class="pln"> </span><span class="typ">PlatformTransactionManager</span><span class="pln"> txManager</span><span class="pun">;</span><span class="pln"> 
+
+</span><span class="typ">TransactionTemplate</span><span class="pln"> </span><span class="kwd">template</span><span class="pln">  </span><span class="pun">=</span><span class="pln"> </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">TransactionTemplate</span><span class="pun">(</span><span class="kwd">this</span><span class="pun">.</span><span class="pln">txManager</span><span class="pun">);</span><span class="pln"> 
+</span><span class="kwd">template</span><span class="pun">.</span><span class="pln">execute</span><span class="pun">(</span><span class="pln"> </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">TransactionCallback</span><span class="pun">&lt;</span><span class="typ">Object</span><span class="pun">&gt;(){</span><span class="pln"> 
+  </span><span class="kwd">public</span><span class="pln"> </span><span class="kwd">void</span><span class="pln"> doInTransaction</span><span class="pun">(</span><span class="typ">TransactionStatus</span><span class="pln"> status</span><span class="pun">){</span><span class="pln"> 
+   </span><span class="com">// work done here will be wrapped by a transaction and committed. </span><span class="pln">
+   </span><span class="com">// the transaction will be rolled back if </span><span class="pln">
+   </span><span class="com">// status.setRollbackOnly(true) is called or an exception is thrown </span><span class="pln">
+  </span><span class="pun">}</span><span class="pln"> 
+</span><span class="pun">});</span></code></pre><p>Taking things a step further, the Spring framework provides solid AOP-based support for enclosing method invocations in a transaction by simply enabling support for it. With this support, you no longer need the <code>TransactionTemplate</code> - the transaction management happens automatically for any method annotated with declarative transaction management enabled. If you’re using Spring’s XML configuration, then use this: </p>
+<pre class="prettyprint"><code class="prettyprint xml"><span class="tag">&lt;tx:annotation-driven</span><span class="pln"> </span><span class="atn">transaction-manager</span><span class="pln"> </span><span class="pun">=</span><span class="pln"> </span><span class="atv">“platformTransactionManagerReference”</span><span class="pln"> </span><span class="tag">/&gt;</span></code></pre><p>If you’re using Spring 3.1, then you can simply annotate your Java configuration class, like this:</p>
+<pre class="prettyprint"><code class="prettyprint java"><br><span class="lit">@EnableTransactionManagement</span><span class="pln">
+</span><span class="lit">@Configuration</span><span class="pln"> 
+</span><span class="kwd">public</span><span class="pln"> </span><span class="kwd">class</span><span class="pln"> </span><span class="typ">MyConfiguration</span><span class="pln"> </span><span class="pun">{</span><span class="pln"> 
+  </span><span class="pun">...</span><span class="pln"> 
+</span></code></pre><p>This annotation will automatically scan your beans and look for a bean of type <code>PlatformTransactionManager</code>, which it will use. Then, in your Java beans, simply declare methods as transactional by annotating them. </p>
+<pre class="prettyprint"><code class="prettyprint java"><br><span class="lit">@Transactional</span><span class="pln">
+</span><span class="kwd">public</span><span class="pln"> </span><span class="kwd">void</span><span class="pln"> work</span><span class="pun">()</span><span class="pln"> </span><span class="pun">{</span><span class="pln"> 
+  </span><span class="com">// the transaction will be rolled back if the </span><span class="pln">
+  </span><span class="com">// method throws an Exception, otherwise committed</span><span class="pln">
+</span><span class="pun">}</span></code></pre><p></p><h2> JTA</h2><br>Now, if you still need to use JTA, at least the choice is yours to make. There are two common scenarios: using JTA in a heavyweight application server (which has all the nasty disadvantages of being tied to a JavaEE server), or using a standalone JTA implementation. <p></p><p>Spring provides support for JTA-based global transaction implementations through a <code>PlatformTransactionManager</code> implementation called <code>JtaTransactionManager</code>. If you use it on a JavaEE application server, it will automatically find the correct <code>javax.transaction.UserTransaction</code> reference from JNDI. Additionally, it will attempt to find the container-specific <code>javax.transaction.TransactionManager</code> reference in 9 different application servers for more advanced use cases like transaction suspension. Behind the scenes, Spring loads different <code>JtaTransactionManager</code> subclasses to take advantage of specific, extra features in different servers when available, for example: <code>WebLogicJtaTransactionManager</code>, <code>WebSphereUowTransactionManager</code> and <code>OC4JJtaTransactionManager</code>. </p><p>So, if you’re inside a Java EE application server, and can’t escape, but want to use Spring’s JTA support, then chances are good that you can use the following namespace configuration support to factory a <code>JtaTransactionManager</code> correctly (and automatically):</p>
+<pre class="prettyprint"><code class="prettyprint xml"><span class="tag">&lt;tx:jta-transaction-manager</span><span class="pln">  </span><span class="tag">/&gt;</span></code></pre><p>Alternatively, you can register a <code>JtaTransactionManager</code> bean instance as appropriate, with no constructor arguments, like this:</p>
+<pre class="prettyprint"><code class="prettyprint java"><br><span class="lit">@Bean</span><span class="pln">
+ </span><span class="kwd">public</span><span class="pln"> </span><span class="typ">PlatformTransactionManager</span><span class="pln"> platformTransactionManager</span><span class="pun">(){</span><span class="pln"> 
+    </span><span class="kwd">return</span><span class="pln"> </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">JtaTransactionManager</span><span class="pun">();</span><span class="pln">
+</span><span class="pun">}</span></code></pre><p>Either way, the end result in a JavaEE application server is that you can now use JTA to manage your transactions in a unified manner thanks to Spring.</p>
+<h2>Using Embeddable Transaction Managers</h2><p>Many choose to use JTA outside of a Java EE application server for obvious reasons: Tomcat or Jetty are lighter, faster, cheaper, testing is possible (and easier), business logic often doesn’t live in an application server, etc. These reasons are more important today in the cloud than ever, where lightweight, composable resources are the norm and top-heavy, monolithic application servers simply don’t scale.</p><p>There are many open-source and commercial, independent JTA transaction managers. In the open-source community, you have several choices like the <a href="http://jotm.ow2.org/xwiki/bin/view/Main/WebHome">Java Open Transaction Manager (JOTM)</a>, <a href="https://www.jboss.org/jbosstm">JBoss TS</a>, <a href="https://docs.codehaus.org/display/BTM/Home">Bitronix Transaction Manager (BTM)</a>, and <a href="http://www.atomikos.com/">Atomikos</a>.</p><p>In this post we’ll introduce a simple method that employs global transactions. We’ll focus on the Atomikos-specific configuration, but there’s also an example demonstrating the identical configuration using Bitronix in the source code. </p><p>The transaction method, in this case, is a simple JPA-based service that must simultaneously submit a JMS message. The code is the hypothetical checkout method for a typical online retailer’s shopping cart. The code looks like this:</p>
+<pre class="prettyprint"><code class="prettyprint java"><br><br><span class="pln">	</span><span class="lit">@Transactional</span><span class="pln">
+	</span><span class="kwd">public</span><span class="pln"> </span><span class="kwd">void</span><span class="pln"> checkout</span><span class="pun">(</span><span class="kwd">long</span><span class="pln"> purchaseId</span><span class="pun">)</span><span class="pln"> </span><span class="pun">{</span><span class="pln">
+		</span><span class="typ">Purchase</span><span class="pln"> purchase </span><span class="pun">=</span><span class="pln"> getPurchaseById</span><span class="pun">(</span><span class="pln">purchaseId</span><span class="pun">);</span><span class="pln">
+
+		</span><span class="kwd">if</span><span class="pln"> </span><span class="pun">(</span><span class="pln">purchase</span><span class="pun">.</span><span class="pln">isFrozen</span><span class="pun">())</span><span class="pln"> 
+		  </span><span class="kwd">throw</span><span class="pln"> </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">RuntimeException</span><span class="pun">(</span><span class="pln">
+			 </span><span class="str">"you can't check out Purchase(#"</span><span class="pln"> </span><span class="pun">+</span><span class="pln"> purchase</span><span class="pun">.</span><span class="pln">getId</span><span class="pun">()</span><span class="pln"> </span><span class="pun">+</span><span class="pln"> </span><span class="str">") that's already been checked out!"</span><span class="pun">);</span><span class="pln">
+
+		</span><span class="typ">Date</span><span class="pln"> purchasedDate </span><span class="pun">=</span><span class="pln"> </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">Date</span><span class="pun">();</span><span class="pln">
+		</span><span class="typ">Set</span><span class="pun">&lt;</span><span class="typ">LineItem</span><span class="pun">&gt;</span><span class="pln"> lis </span><span class="pun">=</span><span class="pln"> purchase</span><span class="pun">.</span><span class="pln">getLineItems</span><span class="pun">();</span><span class="pln">
+		</span><span class="kwd">for</span><span class="pln"> </span><span class="pun">(</span><span class="typ">LineItem</span><span class="pln"> lineItem </span><span class="pun">:</span><span class="pln"> lis</span><span class="pun">)</span><span class="pln"> </span><span class="pun">{</span><span class="pln">
+			lineItem</span><span class="pun">.</span><span class="pln">setPurchasedDate</span><span class="pun">(</span><span class="pln">purchasedDate</span><span class="pun">);</span><span class="pln">
+			entityManager</span><span class="pun">.</span><span class="pln">merge</span><span class="pun">(</span><span class="pln">lineItem</span><span class="pun">);</span><span class="pln">
+		</span><span class="pun">}</span><span class="pln">
+		purchase</span><span class="pun">.</span><span class="pln">setFrozen</span><span class="pun">(</span><span class="kwd">true</span><span class="pun">);</span><span class="pln">
+
+		</span><span class="kwd">this</span><span class="pun">.</span><span class="pln">entityManager</span><span class="pun">.</span><span class="pln">merge</span><span class="pun">(</span><span class="pln">purchase</span><span class="pun">);</span><span class="pln">
+		log</span><span class="pun">.</span><span class="pln">debug</span><span class="pun">(</span><span class="str">"saved purchase updates"</span><span class="pun">);</span><span class="pln">
+		
+		</span><span class="kwd">this</span><span class="pun">.</span><span class="pln">jmsTemplate</span><span class="pun">.</span><span class="pln">convertAndSend</span><span class="pun">(</span><span class="kwd">this</span><span class="pun">.</span><span class="pln">ordersDestinationName</span><span class="pun">,</span><span class="pln"> purchase</span><span class="pun">);</span><span class="pln">
+		log</span><span class="pun">.</span><span class="pln">debug</span><span class="pun">(</span><span class="str">"sent partner notification"</span><span class="pun">);</span><span class="pln">
+	</span><span class="pun">}</span></code></pre><p>The method uses the <code>@Transactional</code> annotation to tell Spring to wrap its invocation in a transaction. The method is employing both JPA - to merge an entity’s changed state - and JMS. So, the work spans two transactional resources and must be made to be consistent among both of them: either both the database update operation and the JMS send operation succeed, or they both rollback. You wouldn’t want to trigger a fulfillment cycle with the JMS message for a product that hasn’t been paid for, after all! </p><p>In order to test the JTA configuration works, you can simply throw a <code>RuntimeException</code> at the very last line, like this:</p>
+<pre class="prettyprint"><code class="prettyprint java"><br><span class="pln"> </span><span class="kwd">if</span><span class="pln"> </span><span class="pun">(</span><span class="kwd">true</span><span class="pun">)</span><span class="pln"> </span><span class="kwd">throw</span><span class="pln"> </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">RuntimeException</span><span class="pun">(</span><span class="str">"Monkey wrench!"</span><span class="pun">);</span></code></pre><p>By then, the purchase entity in the database under normal operation should have had its state changed to frozen and the JMS message should have been sent, triggering fulfillment. An exception thrown at the last line will rollback both of those changes. Spring’s declarative transaction management will intercept the exception and automatically roll back the transaction using the configured <code>JtaTransactionManager</code>. You can then verify that those two events never occurred, and that they are not reflected in the corresponding resources: no JMS message will be enqueued, and the JPA entity’s database record will not have been changed. The test case I used for this was:</p>
+<pre class="prettyprint"><code class="prettyprint java"><br><br><br><span class="kwd">package</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springsource</span><span class="pun">.</span><span class="pln">jta</span><span class="pun">.</span><span class="pln">etailer</span><span class="pun">.</span><span class="pln">store</span><span class="pun">.</span><span class="pln">services</span><span class="pun">;</span><span class="pln">
+
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">apache</span><span class="pun">.</span><span class="pln">commons</span><span class="pun">.</span><span class="pln">logging</span><span class="pun">.*;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">junit</span><span class="pun">.*;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">junit</span><span class="pun">.</span><span class="pln">runner</span><span class="pun">.</span><span class="typ">RunWith</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">test</span><span class="pun">.</span><span class="pln">context</span><span class="pun">.</span><span class="typ">ContextConfiguration</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">test</span><span class="pun">.</span><span class="pln">context</span><span class="pun">.</span><span class="pln">junit4</span><span class="pun">.</span><span class="typ">SpringJUnit4ClassRunner</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">test</span><span class="pun">.</span><span class="pln">context</span><span class="pun">.</span><span class="pln">support</span><span class="pun">.</span><span class="typ">AnnotationConfigContextLoader</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springsource</span><span class="pun">.</span><span class="pln">jta</span><span class="pun">.</span><span class="pln">etailer</span><span class="pun">.</span><span class="pln">store</span><span class="pun">.</span><span class="pln">config</span><span class="pun">.*;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springsource</span><span class="pun">.</span><span class="pln">jta</span><span class="pun">.</span><span class="pln">etailer</span><span class="pun">.</span><span class="pln">store</span><span class="pun">.</span><span class="pln">domain</span><span class="pun">.*;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> javax</span><span class="pun">.</span><span class="pln">inject</span><span class="pun">.</span><span class="typ">Inject</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> </span><span class="kwd">static</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">junit</span><span class="pun">.</span><span class="typ">Assert</span><span class="pun">.</span><span class="pln">assertEquals</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> </span><span class="kwd">static</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">junit</span><span class="pun">.</span><span class="typ">Assert</span><span class="pun">.</span><span class="pln">assertTrue</span><span class="pun">;</span><span class="pln">
+
+</span><span class="lit">@RunWith</span><span class="pun">(</span><span class="typ">SpringJUnit4ClassRunner</span><span class="pun">.</span><span class="kwd">class</span><span class="pun">)</span><span class="pln">
+</span><span class="lit">@ContextConfiguration</span><span class="pun">(</span><span class="pln">loader </span><span class="pun">=</span><span class="pln"> </span><span class="typ">AnnotationConfigContextLoader</span><span class="pun">.</span><span class="kwd">class</span><span class="pun">,</span><span class="pln">
+       classes </span><span class="pun">=</span><span class="pln"> </span><span class="pun">{</span><span class="typ">AtomikosJtaConfiguration</span><span class="pun">.</span><span class="kwd">class</span><span class="pun">,</span><span class="pln"> </span><span class="typ">StoreConfiguration</span><span class="pun">.</span><span class="kwd">class</span><span class="pun">})</span><span class="pln">
+</span><span class="kwd">public</span><span class="pln"> </span><span class="kwd">class</span><span class="pln"> </span><span class="typ">JpaDatabaseCustomerOrderServiceTest</span><span class="pln"> </span><span class="pun">{</span><span class="pln">
+
+	</span><span class="kwd">private</span><span class="pln"> </span><span class="typ">Log</span><span class="pln"> log </span><span class="pun">=</span><span class="pln"> </span><span class="typ">LogFactory</span><span class="pun">.</span><span class="pln">getLog</span><span class="pun">(</span><span class="pln">getClass</span><span class="pun">().</span><span class="pln">getName</span><span class="pun">());</span><span class="pln">
+
+	</span><span class="lit">@Inject</span><span class="pln"> </span><span class="kwd">private</span><span class="pln"> </span><span class="typ">CustomerOrderService</span><span class="pln"> customerOrderService</span><span class="pun">;</span><span class="pln">
+	</span><span class="lit">@Inject</span><span class="pln"> </span><span class="kwd">private</span><span class="pln"> </span><span class="typ">CustomerService</span><span class="pln"> customerService</span><span class="pun">;</span><span class="pln">
+	</span><span class="lit">@Inject</span><span class="pln"> </span><span class="kwd">private</span><span class="pln"> </span><span class="typ">ProductService</span><span class="pln"> productService</span><span class="pun">;</span><span class="pln">
+
+	</span><span class="lit">@Test</span><span class="pln">
+	</span><span class="kwd">public</span><span class="pln"> </span><span class="kwd">void</span><span class="pln"> testAddingProductsToCart</span><span class="pun">()</span><span class="pln"> </span><span class="kwd">throws</span><span class="pln"> </span><span class="typ">Exception</span><span class="pln"> </span><span class="pun">{</span><span class="pln">
+		</span><span class="typ">Customer</span><span class="pln"> customer </span><span class="pun">=</span><span class="pln"> customerService</span><span class="pun">.</span><span class="pln">createCustomer</span><span class="pun">(</span><span class="str">"A"</span><span class="pun">,</span><span class="pln"> </span><span class="str">"Customer"</span><span class="pun">);</span><span class="pln">
+		</span><span class="typ">Purchase</span><span class="pln"> purchase </span><span class="pun">=</span><span class="pln"> customerOrderService</span><span class="pun">.</span><span class="pln">createPurchase</span><span class="pun">(</span><span class="pln">customer</span><span class="pun">.</span><span class="pln">getId</span><span class="pun">());</span><span class="pln">
+		</span><span class="typ">Product</span><span class="pln"> product1 </span><span class="pun">=</span><span class="pln"> productService</span><span class="pun">.</span><span class="pln">createProduct</span><span class="pun">(</span><span class="pln">
+                 </span><span class="str">"Widget1"</span><span class="pun">,</span><span class="pln"> </span><span class="str">"a widget that slices (but not dices)"</span><span class="pun">,</span><span class="pln"> </span><span class="lit">12.0</span><span class="pun">);</span><span class="pln">
+		</span><span class="typ">Product</span><span class="pln"> product2 </span><span class="pun">=</span><span class="pln"> productService</span><span class="pun">.</span><span class="pln">createProduct</span><span class="pun">(</span><span class="pln">
+                 </span><span class="str">"Widget2"</span><span class="pun">,</span><span class="pln"> </span><span class="str">"a widget that dices (but not slices)"</span><span class="pun">,</span><span class="pln"> </span><span class="lit">7.5</span><span class="pun">);</span><span class="pln">
+		</span><span class="typ">LineItem</span><span class="pln"> one </span><span class="pun">=</span><span class="pln"> customerOrderService</span><span class="pun">.</span><span class="pln">addProductToPurchase</span><span class="pun">(</span><span class="pln">
+                 purchase</span><span class="pun">.</span><span class="pln">getId</span><span class="pun">(),</span><span class="pln"> product1</span><span class="pun">.</span><span class="pln">getId</span><span class="pun">());</span><span class="pln">
+		</span><span class="typ">LineItem</span><span class="pln"> two </span><span class="pun">=</span><span class="pln"> customerOrderService</span><span class="pun">.</span><span class="pln">addProductToPurchase</span><span class="pun">(</span><span class="pln">
+                 purchase</span><span class="pun">.</span><span class="pln">getId</span><span class="pun">(),</span><span class="pln"> product2</span><span class="pun">.</span><span class="pln">getId</span><span class="pun">());</span><span class="pln">
+		purchase </span><span class="pun">=</span><span class="pln"> customerOrderService</span><span class="pun">.</span><span class="pln">getPurchaseById</span><span class="pun">(</span><span class="pln">purchase</span><span class="pun">.</span><span class="pln">getId</span><span class="pun">());</span><span class="pln">
+		assertTrue</span><span class="pun">(</span><span class="pln">purchase</span><span class="pun">.</span><span class="pln">getTotal</span><span class="pun">()</span><span class="pln"> </span><span class="pun">==</span><span class="pln"> </span><span class="pun">(</span><span class="pln">product1</span><span class="pun">.</span><span class="pln">getPrice</span><span class="pun">()</span><span class="pln"> </span><span class="pun">+</span><span class="pln"> product2</span><span class="pun">.</span><span class="pln">getPrice</span><span class="pun">()));</span><span class="pln">
+		assertEquals</span><span class="pun">(</span><span class="pln">one</span><span class="pun">.</span><span class="pln">getPurchase</span><span class="pun">().</span><span class="pln">getId</span><span class="pun">(),</span><span class="pln"> purchase</span><span class="pun">.</span><span class="pln">getId</span><span class="pun">());</span><span class="pln">
+		assertEquals</span><span class="pun">(</span><span class="pln">two</span><span class="pun">.</span><span class="pln">getPurchase</span><span class="pun">().</span><span class="pln">getId</span><span class="pun">(),</span><span class="pln"> purchase</span><span class="pun">.</span><span class="pln">getId</span><span class="pun">());</span><span class="pln">
+		</span><span class="com">// this is the part that requires XA to work correctly</span><span class="pln">
+		customerOrderService</span><span class="pun">.</span><span class="pln">checkout</span><span class="pun">(</span><span class="pln">purchase</span><span class="pun">.</span><span class="pln">getId</span><span class="pun">());</span><span class="pln">
+	</span><span class="pun">}</span><span class="pln">
+</span><span class="pun">}</span><span class="pln">
+</span></code></pre><p>The test is a simple transactional script: the shopper creates an account, finds things she likes, adds them to the cart as line items, and then checks out. The checkout method saves the changed state for the shopping cart to the database and then sends a trigger JMS message to notify other systems of the new order. It is in this checkout method that JTA is essential. </p>
+<h2>Configuring the Basic Services</h2><p>We have two configuration classes - the JTA provider specific code which is setup to properly construct an instance of Spring’s <code>JtaTransactionManager</code> - and the rest of the configuration, which should remain static regardless of the <code>PlatformTransactionManager</code> strategy chosen.</p><p>I’ve used Spring’s modular Java configuration to split out the JTA-provider-specific configuration class from the rest of the configuration, so you can easily switch between the Atomikos-specific JTA configuration and the Bitronix-specific JTA configuration. </p><p>Let’s look at the <code>StoreConfiguration</code> class - it will be the same no matter which transaction manager implementation you use. I’ve only excerpted the salient parts so that you can see which parts interact with the configuration that is JTA-provider specific.</p>
+<pre class="prettyprint"><code class="prettyprint java"><br><br><span class="kwd">package</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springsource</span><span class="pun">.</span><span class="pln">jta</span><span class="pun">.</span><span class="pln">etailer</span><span class="pun">.</span><span class="pln">store</span><span class="pun">.</span><span class="pln">config</span><span class="pun">;</span><span class="pln">
+
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">hibernate</span><span class="pun">.</span><span class="pln">cfg</span><span class="pun">.</span><span class="typ">ImprovedNamingStrategy</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">hibernate</span><span class="pun">.</span><span class="pln">dialect</span><span class="pun">.</span><span class="typ">MySQL5Dialect</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">context</span><span class="pun">.</span><span class="pln">annotation</span><span class="pun">.</span><span class="typ">Bean</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">context</span><span class="pun">.</span><span class="pln">annotation</span><span class="pun">.</span><span class="typ">ComponentScan</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">context</span><span class="pun">.</span><span class="pln">annotation</span><span class="pun">.</span><span class="typ">Configuration</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">dao</span><span class="pun">.</span><span class="pln">annotation</span><span class="pun">.</span><span class="typ">PersistenceExceptionTranslationPostProcessor</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">jms</span><span class="pun">.</span><span class="pln">core</span><span class="pun">.</span><span class="typ">JmsTemplate</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">orm</span><span class="pun">.</span><span class="pln">jpa</span><span class="pun">.</span><span class="typ">LocalContainerEntityManagerFactoryBean</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">orm</span><span class="pun">.</span><span class="pln">jpa</span><span class="pun">.</span><span class="pln">vendor</span><span class="pun">.</span><span class="typ">Database</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">orm</span><span class="pun">.</span><span class="pln">jpa</span><span class="pun">.</span><span class="pln">vendor</span><span class="pun">.</span><span class="typ">HibernateJpaVendorAdapter</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">stereotype</span><span class="pun">.</span><span class="typ">Service</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">transaction</span><span class="pun">.</span><span class="typ">PlatformTransactionManager</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">transaction</span><span class="pun">.</span><span class="pln">annotation</span><span class="pun">.</span><span class="typ">EnableTransactionManagement</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">transaction</span><span class="pun">.</span><span class="pln">jta</span><span class="pun">.</span><span class="typ">JtaTransactionManager</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> javax</span><span class="pun">.</span><span class="pln">inject</span><span class="pun">.</span><span class="typ">Inject</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> javax</span><span class="pun">.</span><span class="pln">transaction</span><span class="pun">.</span><span class="typ">TransactionManager</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> javax</span><span class="pun">.</span><span class="pln">transaction</span><span class="pun">.</span><span class="typ">UserTransaction</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> java</span><span class="pun">.</span><span class="pln">util</span><span class="pun">.</span><span class="typ">Properties</span><span class="pun">;</span><span class="pln">
+
+</span><span class="lit">@EnableTransactionManagement</span><span class="pln">
+</span><span class="lit">@Configuration</span><span class="pln">
+</span><span class="lit">@ComponentScan</span><span class="pun">(</span><span class="pln">value </span><span class="pun">=</span><span class="pln"> </span><span class="str">"org.springsource.jta.etailer.store.services"</span><span class="pun">)</span><span class="pln">
+</span><span class="kwd">public</span><span class="pln"> </span><span class="kwd">class</span><span class="pln"> </span><span class="typ">StoreConfiguration</span><span class="pln"> </span><span class="pun">{</span><span class="pln">
+
+	</span><span class="com">// ... 	</span><span class="pln">
+
+	</span><span class="com">// this is a reference to a specific Java configuration class for JTA </span><span class="pln">
+	</span><span class="lit">@Inject</span><span class="pln"> </span><span class="kwd">private</span><span class="pln"> </span><span class="typ">AtomikosJtaConfiguration</span><span class="pln"> jtaConfiguration </span><span class="pun">;</span><span class="pln">
+
+	</span><span class="lit">@Bean</span><span class="pln">
+	</span><span class="kwd">public</span><span class="pln"> </span><span class="typ">JmsTemplate</span><span class="pln"> jmsTemplate</span><span class="pun">()</span><span class="pln"> </span><span class="kwd">throws</span><span class="pln"> </span><span class="typ">Throwable</span><span class="pun">{</span><span class="pln">
+		</span><span class="typ">JmsTemplate</span><span class="pln"> jmsTemplate </span><span class="pun">=</span><span class="pln"> </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">JmsTemplate</span><span class="pun">(</span><span class="pln">  jtaConfiguration</span><span class="pun">.</span><span class="pln">connectionFactory</span><span class="pun">()</span><span class="pln"> </span><span class="pun">);</span><span class="pln">
+		</span><span class="com">// ... </span><span class="pln">
+	</span><span class="pun">}</span><span class="pln">
+
+	</span><span class="lit">@Bean</span><span class="pln">
+	</span><span class="kwd">public</span><span class="pln"> </span><span class="typ">LocalContainerEntityManagerFactoryBean</span><span class="pln"> entityManager </span><span class="pun">()</span><span class="pln"> </span><span class="kwd">throws</span><span class="pln"> </span><span class="typ">Throwable</span><span class="pln">  </span><span class="pun">{</span><span class="pln">
+		</span><span class="typ">LocalContainerEntityManagerFactoryBean</span><span class="pln"> entityManager </span><span class="pun">=</span><span class="pln"> 
+		   </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">LocalContainerEntityManagerFactoryBean</span><span class="pun">();</span><span class="pln">		
+		entityManager</span><span class="pun">.</span><span class="pln">setDataSource</span><span class="pun">(</span><span class="pln">jtaConfiguration</span><span class="pun">.</span><span class="pln">dataSource</span><span class="pun">());</span><span class="pln">
+		</span><span class="typ">Properties</span><span class="pln"> properties </span><span class="pun">=</span><span class="pln"> </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">Properties</span><span class="pun">();</span><span class="pln">
+		</span><span class="com">// ... </span><span class="pln">
+		jtaConfiguration</span><span class="pun">.</span><span class="pln">tailorProperties</span><span class="pun">(</span><span class="pln">properties</span><span class="pun">);</span><span class="pln">
+		entityManager</span><span class="pun">.</span><span class="pln">setJpaProperties</span><span class="pun">(</span><span class="pln">properties</span><span class="pun">);</span><span class="pln">
+		</span><span class="kwd">return</span><span class="pln"> entityManager</span><span class="pun">;</span><span class="pln">
+	</span><span class="pun">}</span><span class="pln">
+
+	</span><span class="lit">@Bean</span><span class="pln">
+	</span><span class="kwd">public</span><span class="pln"> </span><span class="typ">PlatformTransactionManager</span><span class="pln"> platformTransactionManager</span><span class="pun">()</span><span class="pln">  </span><span class="kwd">throws</span><span class="pln"> </span><span class="typ">Throwable</span><span class="pln"> </span><span class="pun">{</span><span class="pln">
+		</span><span class="kwd">return</span><span class="pln"> </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">JtaTransactionManager</span><span class="pun">(</span><span class="pln"> 
+                         jtaConfiguration</span><span class="pun">.</span><span class="pln">userTransaction</span><span class="pun">(),</span><span class="pln"> jtaConfiguration</span><span class="pun">.</span><span class="pln">transactionManager</span><span class="pun">());</span><span class="pln">
+	</span><span class="pun">}</span><span class="pln">
+</span><span class="pun">}</span></code></pre><p>The configuration is all pretty boilerplate – just the normal objects you might configure for any JPA or JMS application. The configuration class, to do its work, needs access to a <code>javax.jms.ConnectionFactory</code>, a <code>javax.sql.DataSource</code>, a <code>javax.transaction.UserTransaction</code> and a <code>javax.transaction.TransactionManager</code>. Because the construction of objects that meet these interfaces is specific to each transaction manager implementation, the definitions of these beans live in a separate Java configuration class, which we import using field injection (<code>@Inject private AtomikosJtaConfiguration jtaConfiguration</code>) at the top of the <code>StoreConfiguration</code> class. </p><p>Our <code>StoreConfiguration</code> turns on automatic transaction handling with the <code>@EnableTransactionManagement</code> annotation. </p><p>We use Spring 3.1’s <code>@PropertySource</code> annotation - which ties into the environment abstraction - to access the keys and values in the services.properties. The property file looks like this:</p>
+<pre class="prettyprint"><code class="prettyprint code"><span class="pln">dataSource</span><span class="pun">.</span><span class="pln">url</span><span class="pun">=</span><span class="pln">jdbc</span><span class="pun">:</span><span class="pln">mysql</span><span class="pun">:</span><span class="com">//127.0.0.1/crm</span><span class="pln">
+dataSource</span><span class="pun">.</span><span class="pln">driverClassName</span><span class="pun">=</span><span class="pln">com</span><span class="pun">.</span><span class="pln">mysql</span><span class="pun">.</span><span class="pln">jdbc</span><span class="pun">.</span><span class="typ">Driver</span><span class="pln">
+dataSource</span><span class="pun">.</span><span class="pln">dialect</span><span class="pun">=</span><span class="pln">org</span><span class="pun">.</span><span class="pln">hibernate</span><span class="pun">.</span><span class="pln">dialect</span><span class="pun">.</span><span class="typ">MySQL5InnoDBDialect</span><span class="pln">
+dataSource</span><span class="pun">.</span><span class="pln">user</span><span class="pun">=</span><span class="pln">crm
+dataSource</span><span class="pun">.</span><span class="pln">password</span><span class="pun">=</span><span class="pln">crm
+
+jms</span><span class="pun">.</span><span class="pln">partnernotifications</span><span class="pun">.</span><span class="pln">destination</span><span class="pun">=</span><span class="pln">orders
+jms</span><span class="pun">.</span><span class="pln">broker</span><span class="pun">.</span><span class="pln">url</span><span class="pun">=</span><span class="pln">tcp</span><span class="pun">:</span><span class="com">//localhost:61616</span></code></pre><p>The most important thing that any JTA configuration will ultimately do is provide a reference to the provider-specific <code>UserTransaction</code>, and a reference to the provider-specific <code>TransactionManager</code>, which is used in creating the <code>PlatformTransactionManager</code> instance, like this:</p>
+<pre class="prettyprint"><code class="prettyprint java"><br><span class="pln">	</span><span class="lit">@Bean</span><span class="pln">	
+	</span><span class="kwd">public</span><span class="pln"> </span><span class="typ">PlatformTransactionManager</span><span class="pln"> platformTransactionManager</span><span class="pun">()</span><span class="pln"> </span><span class="kwd">throws</span><span class="pln"> </span><span class="typ">Throwable</span><span class="pln"> </span><span class="pun">{</span><span class="pln">
+	  </span><span class="typ">UserTransaction</span><span class="pln"> userTransaction </span><span class="pun">=</span><span class="pln"> jtaConfiguration</span><span class="pun">.</span><span class="pln">userTransaction</span><span class="pun">()</span><span class="pln"> </span><span class="pun">;</span><span class="pln">
+	  </span><span class="typ">TransactionManager</span><span class="pln"> transactionManager </span><span class="pun">=</span><span class="pln"> jtaConfiguration</span><span class="pun">.</span><span class="pln">transactionManager</span><span class="pun">()</span><span class="pln"> </span><span class="pun">;</span><span class="pln">
+	  </span><span class="kwd">return</span><span class="pln"> </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">JtaTransactionManager</span><span class="pun">(</span><span class="pln">  userTransaction</span><span class="pun">,</span><span class="pln"> transactionManager </span><span class="pun">);</span><span class="pln">
+	</span><span class="pun">}</span></code></pre>
+<h2> Configuring Atomikos</h2><p>We won’t look at the specifics of both Bitronix and Atomikos implementations, just one, since the source code for the <a href="http://git.springsource.org/spring-samples/spring-samples/blobs/master/showcases/spring-and-jta/src/main/java/org/springsource/jta/etailer/store/config/AtomikosJtaConfiguration.java">Atomikos configuration is available here</a>, and the source code for the <a href="http://git.springsource.org/spring-samples/spring-samples/blobs/master/showcases/spring-and-jta/src/main/java/org/springsource/jta/etailer/store/config/BitronixJtaConfiguration.java">Bitronix configuration is available here</a>. Let’s dissect the Atomikos implementation so that we can breakdown the important players. Once you know what the players are, then understanding the configuration for any third party JTA provider is simple. Swapping out which configuration is used when you run the code is straightforward.</p>
+<pre class="prettyprint"><code class="prettyprint java"><br><span class="kwd">package</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springsource</span><span class="pun">.</span><span class="pln">jta</span><span class="pun">.</span><span class="pln">etailer</span><span class="pun">.</span><span class="pln">store</span><span class="pun">.</span><span class="pln">config</span><span class="pun">;</span><span class="pln">
+
+</span><span class="kwd">import</span><span class="pln"> com</span><span class="pun">.</span><span class="pln">atomikos</span><span class="pun">.</span><span class="pln">icatch</span><span class="pun">.</span><span class="pln">jta</span><span class="pun">.</span><span class="typ">UserTransactionImp</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> com</span><span class="pun">.</span><span class="pln">atomikos</span><span class="pun">.</span><span class="pln">icatch</span><span class="pun">.</span><span class="pln">jta</span><span class="pun">.</span><span class="typ">UserTransactionManager</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> com</span><span class="pun">.</span><span class="pln">atomikos</span><span class="pun">.</span><span class="pln">icatch</span><span class="pun">.</span><span class="pln">jta</span><span class="pun">.</span><span class="pln">hibernate3</span><span class="pun">.</span><span class="typ">TransactionManagerLookup</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> com</span><span class="pun">.</span><span class="pln">atomikos</span><span class="pun">.</span><span class="pln">jdbc</span><span class="pun">.</span><span class="typ">AtomikosDataSourceBean</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> com</span><span class="pun">.</span><span class="pln">atomikos</span><span class="pun">.</span><span class="pln">jms</span><span class="pun">.</span><span class="typ">AtomikosConnectionFactoryBean</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> com</span><span class="pun">.</span><span class="pln">mysql</span><span class="pun">.</span><span class="pln">jdbc</span><span class="pun">.</span><span class="pln">jdbc2</span><span class="pun">.</span><span class="pln">optional</span><span class="pun">.</span><span class="typ">MysqlXADataSource</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">apache</span><span class="pun">.</span><span class="pln">activemq</span><span class="pun">.</span><span class="typ">ActiveMQXAConnectionFactory</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">beans</span><span class="pun">.</span><span class="pln">factory</span><span class="pun">.</span><span class="pln">annotation</span><span class="pun">.</span><span class="typ">Value</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">context</span><span class="pun">.</span><span class="pln">annotation</span><span class="pun">.</span><span class="typ">Bean</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">context</span><span class="pun">.</span><span class="pln">annotation</span><span class="pun">.</span><span class="typ">Configuration</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">context</span><span class="pun">.</span><span class="pln">annotation</span><span class="pun">.</span><span class="typ">PropertySource</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> org</span><span class="pun">.</span><span class="pln">springframework</span><span class="pun">.</span><span class="pln">core</span><span class="pun">.</span><span class="pln">env</span><span class="pun">.</span><span class="typ">Environment</span><span class="pun">;</span><span class="pln">
+
+</span><span class="kwd">import</span><span class="pln"> javax</span><span class="pun">.</span><span class="pln">inject</span><span class="pun">.</span><span class="typ">Inject</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> javax</span><span class="pun">.</span><span class="pln">jms</span><span class="pun">.</span><span class="typ">ConnectionFactory</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> javax</span><span class="pun">.</span><span class="pln">sql</span><span class="pun">.</span><span class="typ">DataSource</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> javax</span><span class="pun">.</span><span class="pln">transaction</span><span class="pun">.</span><span class="typ">TransactionManager</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> javax</span><span class="pun">.</span><span class="pln">transaction</span><span class="pun">.</span><span class="typ">UserTransaction</span><span class="pun">;</span><span class="pln">
+</span><span class="kwd">import</span><span class="pln"> java</span><span class="pun">.</span><span class="pln">util</span><span class="pun">.</span><span class="typ">Properties</span><span class="pun">;</span><span class="pln">
+
+</span><span class="lit">@Configuration</span><span class="pln">
+</span><span class="kwd">public</span><span class="pln"> </span><span class="kwd">class</span><span class="pln"> </span><span class="typ">AtomikosJtaConfiguration</span><span class="pln"> </span><span class="pun">{</span><span class="pln">
+
+	</span><span class="lit">@Inject</span><span class="pln"> </span><span class="kwd">private</span><span class="pln"> </span><span class="typ">Environment</span><span class="pln"> environment </span><span class="pun">;</span><span class="pln">
+
+	</span><span class="kwd">public</span><span class="pln"> </span><span class="kwd">void</span><span class="pln"> tailorProperties</span><span class="pun">(</span><span class="typ">Properties</span><span class="pln"> properties</span><span class="pun">)</span><span class="pln"> </span><span class="pun">{</span><span class="pln">
+		properties</span><span class="pun">.</span><span class="pln">setProperty</span><span class="pun">(</span><span class="pln"> </span><span class="str">"hibernate.transaction.manager_lookup_class"</span><span class="pun">,</span><span class="pln"> 
+				 </span><span class="typ">TransactionManagerLookup</span><span class="pun">.</span><span class="kwd">class</span><span class="pun">.</span><span class="pln">getName</span><span class="pun">());</span><span class="pln">
+	</span><span class="pun">}</span><span class="pln">
+
+	</span><span class="lit">@Bean</span><span class="pln">
+	</span><span class="kwd">public</span><span class="pln"> </span><span class="typ">UserTransaction</span><span class="pln"> userTransaction</span><span class="pun">()</span><span class="pln"> </span><span class="kwd">throws</span><span class="pln"> </span><span class="typ">Throwable</span><span class="pln"> </span><span class="pun">{</span><span class="pln">
+		</span><span class="typ">UserTransactionImp</span><span class="pln"> userTransactionImp </span><span class="pun">=</span><span class="pln"> </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">UserTransactionImp</span><span class="pun">();</span><span class="pln">
+		userTransactionImp</span><span class="pun">.</span><span class="pln">setTransactionTimeout</span><span class="pun">(</span><span class="lit">1000</span><span class="pun">);</span><span class="pln">
+		</span><span class="kwd">return</span><span class="pln"> userTransactionImp</span><span class="pun">;</span><span class="pln">
+	</span><span class="pun">}</span><span class="pln">
+
+	</span><span class="lit">@Bean</span><span class="pun">(</span><span class="pln">initMethod </span><span class="pun">=</span><span class="pln"> </span><span class="str">"init"</span><span class="pun">,</span><span class="pln"> destroyMethod </span><span class="pun">=</span><span class="pln"> </span><span class="str">"close"</span><span class="pun">)</span><span class="pln">
+	</span><span class="kwd">public</span><span class="pln"> </span><span class="typ">TransactionManager</span><span class="pln"> transactionManager</span><span class="pun">()</span><span class="pln"> </span><span class="kwd">throws</span><span class="pln"> </span><span class="typ">Throwable</span><span class="pln"> </span><span class="pun">{</span><span class="pln">
+		</span><span class="typ">UserTransactionManager</span><span class="pln"> userTransactionManager </span><span class="pun">=</span><span class="pln"> </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">UserTransactionManager</span><span class="pun">();</span><span class="pln">
+		userTransactionManager</span><span class="pun">.</span><span class="pln">setForceShutdown</span><span class="pun">(</span><span class="kwd">false</span><span class="pun">);</span><span class="pln">
+		</span><span class="kwd">return</span><span class="pln"> userTransactionManager</span><span class="pun">;</span><span class="pln">
+	</span><span class="pun">}</span><span class="pln">
+
+	</span><span class="lit">@Bean</span><span class="pun">(</span><span class="pln">initMethod </span><span class="pun">=</span><span class="pln"> </span><span class="str">"init"</span><span class="pun">,</span><span class="pln"> destroyMethod </span><span class="pun">=</span><span class="pln"> </span><span class="str">"close"</span><span class="pun">)</span><span class="pln">
+	</span><span class="kwd">public</span><span class="pln"> </span><span class="typ">DataSource</span><span class="pln"> dataSource</span><span class="pun">()</span><span class="pln"> </span><span class="pun">{</span><span class="pln">
+		</span><span class="typ">MysqlXADataSource</span><span class="pln"> mysqlXaDataSource </span><span class="pun">=</span><span class="pln"> </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">MysqlXADataSource</span><span class="pun">();</span><span class="pln">
+		mysqlXaDataSource</span><span class="pun">.</span><span class="pln">setUrl</span><span class="pun">(</span><span class="kwd">this</span><span class="pun">.</span><span class="pln">environment</span><span class="pun">.</span><span class="pln">getProperty</span><span class="pun">(</span><span class="str">"dataSource.url"</span><span class="pun">));</span><span class="pln">
+		mysqlXaDataSource</span><span class="pun">.</span><span class="pln">setPinGlobalTxToPhysicalConnection</span><span class="pun">(</span><span class="kwd">true</span><span class="pun">);</span><span class="pln">
+		mysqlXaDataSource</span><span class="pun">.</span><span class="pln">setPassword</span><span class="pun">(</span><span class="kwd">this</span><span class="pun">.</span><span class="pln">environment</span><span class="pun">.</span><span class="pln">getProperty</span><span class="pun">(</span><span class="str">"dataSource.password"</span><span class="pun">));</span><span class="pln">
+		mysqlXaDataSource</span><span class="pun">.</span><span class="pln">setUser</span><span class="pun">(</span><span class="kwd">this</span><span class="pun">.</span><span class="pln">environment</span><span class="pun">.</span><span class="pln">getProperty </span><span class="pun">(</span><span class="str">"dataSource.password"</span><span class="pun">));</span><span class="pln">
+
+		</span><span class="typ">AtomikosDataSourceBean</span><span class="pln"> xaDataSource </span><span class="pun">=</span><span class="pln"> </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">AtomikosDataSourceBean</span><span class="pun">();</span><span class="pln">
+		xaDataSource</span><span class="pun">.</span><span class="pln">setXaDataSource</span><span class="pun">(</span><span class="pln">mysqlXaDataSource</span><span class="pun">);</span><span class="pln">
+		xaDataSource</span><span class="pun">.</span><span class="pln">setUniqueResourceName</span><span class="pun">(</span><span class="str">"xads"</span><span class="pun">);</span><span class="pln">
+		</span><span class="kwd">return</span><span class="pln"> xaDataSource</span><span class="pun">;</span><span class="pln">
+	</span><span class="pun">}</span><span class="pln">
+
+	</span><span class="lit">@Bean</span><span class="pun">(</span><span class="pln">initMethod </span><span class="pun">=</span><span class="pln"> </span><span class="str">"init"</span><span class="pun">,</span><span class="pln"> destroyMethod </span><span class="pun">=</span><span class="pln"> </span><span class="str">"close"</span><span class="pun">)</span><span class="pln">
+	</span><span class="kwd">public</span><span class="pln"> </span><span class="typ">ConnectionFactory</span><span class="pln"> connectionFactory</span><span class="pun">()</span><span class="pln"> </span><span class="pun">{</span><span class="pln">
+		</span><span class="typ">ActiveMQXAConnectionFactory</span><span class="pln"> activeMQXAConnectionFactory </span><span class="pun">=</span><span class="pln"> </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">ActiveMQXAConnectionFactory</span><span class="pun">();</span><span class="pln">
+		activeMQXAConnectionFactory</span><span class="pun">.</span><span class="pln">setBrokerURL</span><span class="pun">(</span><span class="kwd">this</span><span class="pun">.</span><span class="pln">environment</span><span class="pun">.</span><span class="pln">getProperty</span><span class="pun">(</span><span class="pln"> </span><span class="str">"jms.broker.url"</span><span class="pun">)</span><span class="pln">  </span><span class="pun">);</span><span class="pln">
+		</span><span class="typ">AtomikosConnectionFactoryBean</span><span class="pln"> atomikosConnectionFactoryBean </span><span class="pun">=</span><span class="pln"> </span><span class="kwd">new</span><span class="pln"> </span><span class="typ">AtomikosConnectionFactoryBean</span><span class="pun">();</span><span class="pln">
+		atomikosConnectionFactoryBean</span><span class="pun">.</span><span class="pln">setUniqueResourceName</span><span class="pun">(</span><span class="str">"xamq"</span><span class="pun">);</span><span class="pln">
+		atomikosConnectionFactoryBean</span><span class="pun">.</span><span class="pln">setLocalTransactionMode</span><span class="pun">(</span><span class="kwd">false</span><span class="pun">);</span><span class="pln">
+		atomikosConnectionFactoryBean</span><span class="pun">.</span><span class="pln">setXaConnectionFactory</span><span class="pun">(</span><span class="pln">activeMQXAConnectionFactory</span><span class="pun">);</span><span class="pln">
+		</span><span class="kwd">return</span><span class="pln"> atomikosConnectionFactoryBean</span><span class="pun">;</span><span class="pln">
+	</span><span class="pun">}</span><span class="pln">
+</span><span class="pun">}</span><span class="pln"> </span></code></pre><p>Atomikos provides its own <code>java.sql.DataSource</code> and <code>javax.jms.ConnectionFactory</code> wrappers that adapt any native <code>java.sql.DataSource</code> or <code>javax.jms.ConnectionFactory</code> to one that is JTA (and XA) aware. </p><p>To teach Hibernate how to participate in the Atomikos transaction, we must set a property - <code>hibernate.transaction.manager_lookup_class</code> - in this case, a class called <code>TransactionManagerLookup</code>. You will need to do this for any JTA implementation. </p><p>Finally, we need to provide a <code>javax.transaction.TransactionManager</code> implementation, and a <code>javax.transaction.UserTransaction</code> implementation. The two beans at the top of the class are Atomikos’ implementations of those two interfaces, which are used in constructing Spring’s <code>JtaTransactionManager</code> implementation, which is an implementation of <code>PlatformTransactionManager</code>. </p><p>The <code>PlatformTransactionManager</code> instance is in turn automatically picked up by the <code>@EnableTransactionManagement</code> annotation on our configuration class and used to perform transactions whenever any method with <code>@Transactional</code> is invoked. </p><p>The duties of a <code>javax.transaction.UserTransaction</code> implementation and a <code>javax.transaction.TransactionManager</code> implementation are similar: the UserTransaction is the user-facing API, and the <code>TransactionManager</code> is the server-facing API. All JTA implementations specify a <code>UserTransaction</code>0 implementation, as it is the minimum required by JavaEE. The <code>TransactionManager</code> is not a requirement, and is not always available in every server or JTA implementation. </p><p>For those familiar with JTA, using the <code>UserTransaction</code>, as you do when controlling transactions programmatically in JavaEE, has some significant gaps, perhaps understandable given the now obsolete assumption when J2EE was first conceived nearly ten years ago that no one would ever want to do transaction management without EJB.</p><p>The problem is that some operations like suspending a transaction (to get “requires new” semantics, for example), are only possible on the <code>TransactionManager</code>. This interface is standardized in the JTA spec, but unlike the <code>UserTransaction</code> it does not offer a well-known JNDI location or other way of obtaining it. Some other things, such as control of isolation level or server-specific “transaction naming” (for monitoring or other purposes) are not possible at all with JTA.</p><p>TransactionManager provides advanced features like transaction suspension and resumption, so most providers support it as well. In fact, many<code>javax.transaction.TransactionManager</code> implementations can be cast at runtime to a <code>javax.transaction.UserTransaction</code> implementation. Spring knows this and is very smart about it. If you define an instance of Spring’s <code>JtaTransactionManager</code> implementation with only a reference to a javax.transaction.TransactionManager, it will attempt to coerce a <code>javax.transaction.UserTransaction</code> instance out of it at runtime, as well. Atomikos, however, does not do this, and so we explicitly define a <code>javax.transaction.UserTransaction</code> instance and - to take better advantage of the more enhanced capabilities of a <code>javax.transaction.TransactionManager</code> - a separate <code>javax.transaction.TransactionManager</code> instance.</p><p>And, that’s it! You can have your cake, and eat it too with Spring. The Bitronix configuration looks similar as it is satisfying similar duties. You won’t have to tweak this code very often. It’s quite likely you can simply reuse the configuration presented here, adjusting the connection strings and drivers as appropriate.</p>
+<h2>Summary</h2><p>In this post, we’ve introduced the rich support for transactions in the Spring framework, and we introduced Spring’s unique ability to work seamlessly with all types of JTA – in an embedded configuration as well as through an existing application server. If you are forced to use a full blown Java EE Server, Spring’s abstraction for JTA is easy and increases the portability of your code should you choose to move to a lightweight container like Apache Tomcat or vFabric tc Server. This complete example code using an embeddable transaction manager lets you use the same business logic in your Spring beans with a simple configuration change.  This post did not introduce specifics about the general transaction management support in Spring. For one of the best looks at XA-based distributed transaction management with Spring, including some very good insight on how and when to avoid it all together, see Dr. Dave Syer’s article on “<a href="http://www.javaworld.com/javaworld/jw-01-2009/jw-01-spring-transactions.html">Distributed transactions in Spring, with and without XA.</a>” </p></div>
+</div>
+<section id="disqus_thread"><iframe id="dsq-app1" name="dsq-app1" allowtransparency="true" frameborder="0" scrolling="no" tabindex="0" title="Disqus" width="100%" src="./Configuring Spring and JTA without full Java EE_files/saved_resource.html" style="width: 1px !important; min-width: 100% !important; border: none !important; overflow: hidden !important; height: 1382px !important;" horizontalscrolling="no" verticalscrolling="no"></iframe></section>
+<script type="text/javascript">
+      var disqus_shortname = 'spring-io';
+      var disqus_identifier = 429;
+
+      (function(disqus_shortname, document) {
+        injectScript('//' + disqus_shortname + '.disqus.com/embed.js');
+        injectScript('//' + disqus_shortname + '.disqus.com/count.js');
+
+        function injectScript(url) {
+          var s = document.createElement('script');
+          s.async = true;
+          s.src = url;
+          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(s);
+        }
+
+      }(disqus_shortname, document));
+    </script>
+<noscript>Please enable JavaScript to view the &lt;a href="http://disqus.com/?ref_noscript"&gt;comments powered by Disqus.&lt;/a&gt;</noscript>
+
+<div class="mobile-only">
+<p><a href="https://spring.io/blog">
+<i class="icon-chevron-left"></i>
+Back
+</a></p>
+</div>
+</article>
+<aside class="span4 mobile-right-pane" id="sidebar">
+<div>
+<ul class="right-pane-widget--container secondary-nav with-icon">
+<li class="blog-category">
+<div class="icon blog-icon all-posts"></div>
+<a href="https://spring.io/blog">All Posts</a>
+<a class="pull-right" href="https://spring.io/blog.atom"><i class="icon-rss"></i></a>
+</li>
+<li class="blog-category active">
+<div class="icon blog-icon engineering"></div>
+<a href="https://spring.io/blog/category/engineering">Engineering</a>
+<a class="pull-right" href="https://spring.io/blog/category/engineering.atom"><i class="icon-rss"></i></a>
+</li>
+<li class="blog-category">
+<div class="icon blog-icon releases"></div>
+<a href="https://spring.io/blog/category/releases">Releases</a>
+<a class="pull-right" href="https://spring.io/blog/category/releases.atom"><i class="icon-rss"></i></a>
+</li>
+<li class="blog-category">
+<div class="icon blog-icon news-and-events"></div>
+<a href="https://spring.io/blog/category/news">News and Events</a>
+<a class="pull-right" href="https://spring.io/blog/category/news.atom"><i class="icon-rss"></i></a>
+</li>
+</ul>
+<ul class="social-btn--container">
+<a class="social-btn twitter" href="https://twitter.com/springcentral"></a>
+<a class="social-btn googleplus" href="https://plus.google.com/+springframework"></a>
+<a class="social-btn linkedin" href="https://www.linkedin.com/groups/Spring-Users-46964"></a>
+<a class="social-btn youtube" href="https://spring.io/videos"></a>
+</ul>
+</div>
+</aside>
+</div>
+</div>
+</div>
+<footer class="footer">
+<div class="container-fluid">
+<div class="row-fluid">
+<div class="span12">
+<div class="navbar">
+<div class="container">
+<ul class="nav">
+<li><a href="https://spring.io/team">Team</a></li>
+<li><a href="https://spring.io/services">Services</a></li>
+<li><a href="https://spring.io/tools">Tools</a></li>
+<li><a href="https://store.spring.io/">Store</a></li>
+</ul>
+</div>
+</div>
+© <span>2017</span> <a href="https://www.pivotal.io/">Pivotal Software</a>, Inc. All Rights Reserved.
+<a href="https://www.pivotal.io/terms-of-use">Terms of Use</a>,
+<a href="https://www.pivotal.io/privacy-policy">Privacy</a> and
+<a href="https://spring.io/trademarks">Trademark Guidelines</a>
+</div>
+</div>
+</div>
+</footer>
+<div id="scrim"></div>
+</div>
+<iframe style="display: none;" src="./Configuring Spring and JTA without full Java EE_files/saved_resource(2).html"></iframe></body></html>

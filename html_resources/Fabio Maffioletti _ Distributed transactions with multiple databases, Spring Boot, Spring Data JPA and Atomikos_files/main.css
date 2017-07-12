@@ -1,0 +1,48 @@
+body {
+  color: #515151;
+}
+ul.list-inline>li {
+  padding-left: 0px;
+  padding-right: 0px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #303030;
+}
+
+h1 {
+  font-size: 40px;
+  font-weight: bold;
+}
+
+h2 {
+  font-size: 25px;
+  font-weight: bold; 
+}
+
+h2.head {
+  color: #505050; 
+}
+
+a.head {
+  color: #505050;
+  margin-left: 20px;
+  font-size: 19px;
+}
+
+span.post-date {
+  display: block;
+  font-size: 20px;
+  margin-bottom: 20px;
+  margin-top: -10px;
+  color: #9a9a9a;
+}
+
+a.contact {
+  text-decoration: none;
+  color: #505050;
+}
+
+.spaced {
+  margin-top: 40px;
+}

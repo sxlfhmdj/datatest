@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<!-- saved from url=(0124)http://fabiomaffioletti.me/blog/2014/04/15/distributed-transactions-multiple-databases-spring-boot-spring-data-jpa-atomikos/ -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Distributed transactions with multiple databases, Spring Boot, Spring Data JPA and Atomikos">
+    <meta name="keywords" content="software engineer, java developer, spring framework developer, j2ee developer, java j2ee developer, android developer">
+    <meta name="author" content="Fabio Maffioletti">
+    <link rel="canonical" href="http://fabiomaffioletti.me/blog/2014/04/15/distributed-transactions-multiple-databases-spring-boot-spring-data-jpa-atomikos/">
+    <title>Fabio Maffioletti | Distributed transactions with multiple databases, Spring Boot, Spring Data JPA and Atomikos</title>
+
+    <link rel="icon" href="http://fabiomaffioletti.me/img/favicon.ico" type="image/x-icon">
+    <link href="./Fabio Maffioletti _ Distributed transactions with multiple databases, Spring Boot, Spring Data JPA and Atomikos_files/bootstrap.min.css" rel="stylesheet">
+    
+    <link href="./Fabio Maffioletti _ Distributed transactions with multiple databases, Spring Boot, Spring Data JPA and Atomikos_files/font-awesome.min.css" rel="stylesheet">
+    <link href="./Fabio Maffioletti _ Distributed transactions with multiple databases, Spring Boot, Spring Data JPA and Atomikos_files/syntax.css" rel="stylesheet">
+
+    <link href="./Fabio Maffioletti _ Distributed transactions with multiple databases, Spring Boot, Spring Data JPA and Atomikos_files/main.css" rel="stylesheet">
+
+    <script async="" src="./Fabio Maffioletti _ Distributed transactions with multiple databases, Spring Boot, Spring Data JPA and Atomikos_files/analytics.js.下载"></script><script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-4918972-6', 'fabiomaffioletti.me');
+  ga('send', 'pageview');
+
+</script>
+
+  <script type="text/javascript" async="" src="./Fabio Maffioletti _ Distributed transactions with multiple databases, Spring Boot, Spring Data JPA and Atomikos_files/embed.js.下载"></script><link rel="preload" as="style" href="https://c.disquscdn.com/next/embed/styles/lounge.e52b2f99308b09ef7684f62bab4d6f07.css"><link rel="preload" as="script" href="https://c.disquscdn.com/next/embed/common.bundle.d136eb961b3bb837afdc321c8f9da911.js"><link rel="preload" as="script" href="https://c.disquscdn.com/next/embed/lounge.bundle.746166ba395ae4549360d4ae6331217c.js"><link rel="preload" as="script" href="https://disqus.com/next/config.js"><style type="text/css">/* This is not a zero-length file! */</style><style type="text/css">/* This is not a zero-length file! */</style></head>
+
+  <body>
+    <div class="container">
+
+      <div class="row">
+        <div class="col-md-8">
+          <h2 class="head">Fabio Maffioletti
+          
+            <small><a class="head" href="http://fabiomaffioletti.me/">About</a></small>
+          
+            <small><a class="head" href="http://fabiomaffioletti.me/curriculum">Curriculum</a></small>
+          
+            <small><a class="head" href="http://fabiomaffioletti.me/blog">Blog</a></small>
+          
+          </h2>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="pull-right">
+            <h4 style="margin-top: 25px;">
+              <a class="contact" href="http://www.linkedin.com/in/fabiomaffioletti" target="_blank"><i class="icon-linkedin-sign icon-large"></i></a>
+              <a class="contact" href="http://twitter.com/fubbyo" target="_blank"><i class="icon-twitter-sign icon-large"></i></a>
+              <a class="contact" href="https://github.com/fabiomaffioletti/" target="_blank"><i class="icon-github-sign icon-large"></i></a>
+              <a class="contact" href="skype:fabio-maffioletti?add" target="_blank"><i class="icon-phone-sign icon-large"></i></a>
+            </h4>
+          </div>
+        </div>
+      </div>
+      <hr style="margin-top: 0px;">
+
+      <div class="row">
+	<div class="col-md-12">
+		
+		<h1>
+			Distributed transactions with multiple databases, Spring Boot, Spring Data JPA and Atomikos
+		</h1>
+		<span class="post-date">15 Apr 2014</span>
+
+		<p>A couple of weeks ago I was evaluating the possibility to use Spring Boot, Spring Data JPA and Atomikos for distributed transactions involving multiple databases. After looking at the <a href="http://spring.io/blog/2011/08/15/configuring-spring-and-jta-without-full-java-ee/" target="_blank">Spring blog article</a> (which involves one database and ActiveMQ) and having done some attempts, I could not get it to work with two databases. The configuration seemed fine, but the Entity Manager did not get notified when persisting my entities. So I wrote <a href="http://stackoverflow.com/questions/22779155/spring-boot-spring-data-jpa-atomikos-multiple-databases-configuration/" target="_blank">this question</a> on StackOverflow, which has been answered directly by <a href="https://twitter.com/david_syer" target="_blank">Dave Syer</a> and <a href="https://twitter.com/olivergierke" target="_blank">Oliver Gierke</a>. This post is to share and discuss the solution.</p>
+
+<h3>Description of the case and entities model</h3>
+<p>We want to be able to save two entities at the same time into two different databases; the operation must be transactional. So, in this example, we have a Customer entity, which is persisted in the first database, and an Order entity which is persisted in the second database. The two entities are very simple, as they serve only as a demonstration.</p>
+<p class="text-center"><img alt="Custom order database 1" src="./Fabio Maffioletti _ Distributed transactions with multiple databases, Spring Boot, Spring Data JPA and Atomikos_files/customer-order-databases-1.png"></p>
+<p>The resulting implementation is the following. It's worth noting that they belong to two different packages, for two main reasons:</p>
+<ol>
+	<li>it's a logical separation that gives order to the project</li>
+	<li>each repository will scan packages containing only entities that it will be going to manage</li>
+</ol>
+
+<figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="kn">package</span> <span class="n">com</span><span class="o">.</span><span class="na">at</span><span class="o">.</span><span class="na">mul</span><span class="o">.</span><span class="na">domain</span><span class="o">.</span><span class="na">customer</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">javax.persistence.Column</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">javax.persistence.Entity</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">javax.persistence.GeneratedValue</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">javax.persistence.GenerationType</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">javax.persistence.Id</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">javax.persistence.Table</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">lombok.Data</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">lombok.EqualsAndHashCode</span><span class="o">;</span>
+
+<span class="nd">@Entity</span>
+<span class="nd">@Table</span><span class="o">(</span><span class="n">name</span> <span class="o">=</span> <span class="s">"customer"</span><span class="o">)</span>
+<span class="nd">@Data</span>
+<span class="nd">@EqualsAndHashCode</span><span class="o">(</span><span class="n">exclude</span> <span class="o">=</span> <span class="o">{</span> <span class="s">"id"</span> <span class="o">})</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">Customer</span> <span class="o">{</span>
+
+	<span class="nd">@Id</span>
+	<span class="nd">@GeneratedValue</span><span class="o">(</span><span class="n">strategy</span> <span class="o">=</span> <span class="n">GenerationType</span><span class="o">.</span><span class="na">AUTO</span><span class="o">)</span>
+	<span class="kd">private</span> <span class="n">Integer</span> <span class="n">id</span><span class="o">;</span>
+
+	<span class="nd">@Column</span><span class="o">(</span><span class="n">name</span> <span class="o">=</span> <span class="s">"name"</span><span class="o">,</span> <span class="n">nullable</span> <span class="o">=</span> <span class="kc">false</span><span class="o">)</span>
+	<span class="kd">private</span> <span class="n">String</span> <span class="n">name</span><span class="o">;</span>
+
+	<span class="nd">@Column</span><span class="o">(</span><span class="n">name</span> <span class="o">=</span> <span class="s">"age"</span><span class="o">,</span> <span class="n">nullable</span> <span class="o">=</span> <span class="kc">false</span><span class="o">)</span>
+	<span class="kd">private</span> <span class="n">Integer</span> <span class="n">age</span><span class="o">;</span>
+
+<span class="o">}</span></code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="kn">package</span> <span class="n">com</span><span class="o">.</span><span class="na">at</span><span class="o">.</span><span class="na">mul</span><span class="o">.</span><span class="na">domain</span><span class="o">.</span><span class="na">order</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">javax.persistence.Column</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">javax.persistence.Entity</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">javax.persistence.GeneratedValue</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">javax.persistence.GenerationType</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">javax.persistence.Id</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">javax.persistence.Table</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">lombok.Data</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">lombok.EqualsAndHashCode</span><span class="o">;</span>
+
+<span class="nd">@Entity</span>
+<span class="nd">@Table</span><span class="o">(</span><span class="n">name</span> <span class="o">=</span> <span class="s">"orders"</span><span class="o">)</span>
+<span class="nd">@Data</span>
+<span class="nd">@EqualsAndHashCode</span><span class="o">(</span><span class="n">exclude</span> <span class="o">=</span> <span class="o">{</span> <span class="s">"id"</span> <span class="o">})</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">Order</span> <span class="o">{</span>
+
+	<span class="nd">@Id</span>
+	<span class="nd">@GeneratedValue</span><span class="o">(</span><span class="n">strategy</span> <span class="o">=</span> <span class="n">GenerationType</span><span class="o">.</span><span class="na">AUTO</span><span class="o">)</span>
+	<span class="kd">private</span> <span class="n">Integer</span> <span class="n">id</span><span class="o">;</span>
+
+	<span class="nd">@Column</span><span class="o">(</span><span class="n">name</span> <span class="o">=</span> <span class="s">"code"</span><span class="o">,</span> <span class="n">nullable</span> <span class="o">=</span> <span class="kc">false</span><span class="o">)</span>
+	<span class="kd">private</span> <span class="n">Integer</span> <span class="n">code</span><span class="o">;</span>
+
+	<span class="nd">@Column</span><span class="o">(</span><span class="n">name</span> <span class="o">=</span> <span class="s">"quantity"</span><span class="o">,</span> <span class="n">nullable</span> <span class="o">=</span> <span class="kc">false</span><span class="o">)</span>
+	<span class="kd">private</span> <span class="n">Integer</span> <span class="n">quantity</span><span class="o">;</span>
+
+<span class="o">}</span></code></pre></figure>
+
+<blockquote>
+See <a href="http://projectlombok.org/" target="_blank">Lombok</a> for annotations like <code>@Data</code> and <code>@EqualsAndHashCode</code>
+</blockquote>
+
+<h3>Write repositories interfaces</h3>
+<p>Also in this case it's standard, the only thing to notice is that I put the two interfaces in two different packages. The reason is explained in the next step.</p>
+
+<figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="kn">package</span> <span class="n">com</span><span class="o">.</span><span class="na">at</span><span class="o">.</span><span class="na">mul</span><span class="o">.</span><span class="na">repository</span><span class="o">.</span><span class="na">customer</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">org.springframework.data.jpa.repository.JpaRepository</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">com.at.mul.domain.customer.Customer</span><span class="o">;</span>
+
+<span class="kd">public</span> <span class="kd">interface</span> <span class="nc">CustomerRepository</span> <span class="kd">extends</span> <span class="n">JpaRepository</span><span class="o">&lt;</span><span class="n">Customer</span><span class="o">,</span> <span class="n">Integer</span><span class="o">&gt;</span> <span class="o">{</span>
+
+<span class="o">}</span></code></pre></figure>
+
+
+<figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="kn">package</span> <span class="n">com</span><span class="o">.</span><span class="na">at</span><span class="o">.</span><span class="na">mul</span><span class="o">.</span><span class="na">repository</span><span class="o">.</span><span class="na">order</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">org.springframework.data.jpa.repository.JpaRepository</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">com.at.mul.domain.order.Order</span><span class="o">;</span>
+
+<span class="kd">public</span> <span class="kd">interface</span> <span class="nc">OrderRepository</span> <span class="kd">extends</span> <span class="n">JpaRepository</span><span class="o">&lt;</span><span class="n">Order</span><span class="o">,</span> <span class="n">Integer</span><span class="o">&gt;</span> <span class="o">{</span>
+
+<span class="o">}</span></code></pre></figure>
+
+<h3>Write configuration classes</h3>
+This is where it becomes interesting. The <code>@DependsOn("transactionManager")</code> annotation is not mandatory, but I needed this to get rid of several warnings at tests (or application) startup, like <code>WARNING: transaction manager not running?</code> in the logs. The next annotation <code>@EnableJpaRepositories</code> is more important:
+<ul>
+	<li>it specifies which are the packages to scan for annotated components (repository interfaces), and in my case I wanted only repositories related to the <em>customer</em> (and conversely to the <em>order</em>).</li>
+	<li>it specifies which is the entity manager to be used to manage entities, in my case the <code>customerEntityManager</code> for customer related operations and <code>orderEntityManager</code> for order related operations</li>
+	<li>it specifies the transaction manager to be used, in my case the <code>transactionManager</code> defined in the <code>MainConfig</code> class. This needs to be the same for every <code>@EnableJpaRepositories</code> to get distributed transactions working</li>
+</ul>
+
+<figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="kn">package</span> <span class="n">com</span><span class="o">.</span><span class="na">at</span><span class="o">.</span><span class="na">mul</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">java.util.HashMap</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">javax.sql.DataSource</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">org.h2.jdbcx.JdbcDataSource</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.beans.factory.annotation.Autowired</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.boot.context.properties.EnableConfigurationProperties</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.context.annotation.Bean</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.context.annotation.Configuration</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.context.annotation.DependsOn</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.data.jpa.repository.config.EnableJpaRepositories</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.orm.jpa.JpaVendorAdapter</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">com.at.mul.repository.customer.CustomerDatasourceProperties</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">com.atomikos.jdbc.AtomikosDataSourceBean</span><span class="o">;</span>
+
+<span class="nd">@Configuration</span>
+<span class="nd">@DependsOn</span><span class="o">(</span><span class="s">"transactionManager"</span><span class="o">)</span>
+<span class="nd">@EnableJpaRepositories</span><span class="o">(</span><span class="n">basePackages</span> <span class="o">=</span> <span class="s">"com.at.mul.repository.customer"</span><span class="o">,</span> <span class="n">entityManagerFactoryRef</span> <span class="o">=</span> <span class="s">"customerEntityManager"</span><span class="o">,</span> <span class="n">transactionManagerRef</span> <span class="o">=</span> <span class="s">"transactionManager"</span><span class="o">)</span>
+<span class="nd">@EnableConfigurationProperties</span><span class="o">(</span><span class="n">CustomerDatasourceProperties</span><span class="o">.</span><span class="na">class</span><span class="o">)</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">CustomerConfig</span> <span class="o">{</span>
+
+	<span class="nd">@Autowired</span>
+	<span class="kd">private</span> <span class="n">JpaVendorAdapter</span> <span class="n">jpaVendorAdapter</span><span class="o">;</span>
+
+	<span class="nd">@Autowired</span>
+	<span class="kd">private</span> <span class="n">CustomerDatasourceProperties</span> <span class="n">customerDatasourceProperties</span><span class="o">;</span>
+
+	<span class="nd">@Bean</span><span class="o">(</span><span class="n">name</span> <span class="o">=</span> <span class="s">"customerDataSource"</span><span class="o">,</span> <span class="n">initMethod</span> <span class="o">=</span> <span class="s">"init"</span><span class="o">,</span> <span class="n">destroyMethod</span> <span class="o">=</span> <span class="s">"close"</span><span class="o">)</span>
+	<span class="kd">public</span> <span class="n">DataSource</span> <span class="nf">customerDataSource</span><span class="o">()</span> <span class="o">{</span>
+		<span class="n">JdbcDataSource</span> <span class="n">h2XaDataSource</span> <span class="o">=</span> <span class="k">new</span> <span class="n">JdbcDataSource</span><span class="o">();</span>
+		<span class="n">h2XaDataSource</span><span class="o">.</span><span class="na">setURL</span><span class="o">(</span><span class="n">customerDatasourceProperties</span><span class="o">.</span><span class="na">getUrl</span><span class="o">());</span>
+
+		<span class="n">AtomikosDataSourceBean</span> <span class="n">xaDataSource</span> <span class="o">=</span> <span class="k">new</span> <span class="n">AtomikosDataSourceBean</span><span class="o">();</span>
+		<span class="n">xaDataSource</span><span class="o">.</span><span class="na">setXaDataSource</span><span class="o">(</span><span class="n">h2XaDataSource</span><span class="o">);</span>
+		<span class="n">xaDataSource</span><span class="o">.</span><span class="na">setUniqueResourceName</span><span class="o">(</span><span class="s">"xads1"</span><span class="o">);</span>
+		<span class="k">return</span> <span class="n">xaDataSource</span><span class="o">;</span>
+	<span class="o">}</span>
+
+	<span class="nd">@Bean</span><span class="o">(</span><span class="n">name</span> <span class="o">=</span> <span class="s">"customerEntityManager"</span><span class="o">)</span>
+	<span class="nd">@DependsOn</span><span class="o">(</span><span class="s">"transactionManager"</span><span class="o">)</span>
+	<span class="kd">public</span> <span class="n">LocalContainerEntityManagerFactoryBean</span> <span class="nf">customerEntityManager</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">Throwable</span> <span class="o">{</span>
+
+		<span class="n">HashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">Object</span><span class="o">&gt;</span> <span class="n">properties</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">Object</span><span class="o">&gt;();</span>
+		<span class="n">properties</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s">"hibernate.transaction.jta.platform"</span><span class="o">,</span> <span class="n">AtomikosJtaPlatform</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getName</span><span class="o">());</span>
+		<span class="n">properties</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s">"javax.persistence.transactionType"</span><span class="o">,</span> <span class="s">"JTA"</span><span class="o">);</span>
+
+		<span class="n">LocalContainerEntityManagerFactoryBean</span> <span class="n">entityManager</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LocalContainerEntityManagerFactoryBean</span><span class="o">();</span>
+		<span class="n">entityManager</span><span class="o">.</span><span class="na">setJtaDataSource</span><span class="o">(</span><span class="n">customerDataSource</span><span class="o">());</span>
+		<span class="n">entityManager</span><span class="o">.</span><span class="na">setJpaVendorAdapter</span><span class="o">(</span><span class="n">jpaVendorAdapter</span><span class="o">);</span>
+		<span class="n">entityManager</span><span class="o">.</span><span class="na">setPackagesToScan</span><span class="o">(</span><span class="s">"com.at.mul.domain.customer"</span><span class="o">);</span>
+		<span class="n">entityManager</span><span class="o">.</span><span class="na">setPersistenceUnitName</span><span class="o">(</span><span class="s">"customerPersistenceUnit"</span><span class="o">);</span>
+		<span class="n">entityManager</span><span class="o">.</span><span class="na">setJpaPropertyMap</span><span class="o">(</span><span class="n">properties</span><span class="o">);</span>
+		<span class="k">return</span> <span class="n">entityManager</span><span class="o">;</span>
+	<span class="o">}</span>
+
+<span class="o">}</span></code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="kn">package</span> <span class="n">com</span><span class="o">.</span><span class="na">at</span><span class="o">.</span><span class="na">mul</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">java.util.HashMap</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">javax.sql.DataSource</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">org.h2.jdbcx.JdbcDataSource</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.beans.factory.annotation.Autowired</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.boot.context.properties.EnableConfigurationProperties</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.context.annotation.Bean</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.context.annotation.Configuration</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.context.annotation.DependsOn</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.data.jpa.repository.config.EnableJpaRepositories</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.orm.jpa.JpaVendorAdapter</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">com.at.mul.repository.order.OrderDatasourceProperties</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">com.atomikos.jdbc.AtomikosDataSourceBean</span><span class="o">;</span>
+
+<span class="nd">@Configuration</span>
+<span class="nd">@DependsOn</span><span class="o">(</span><span class="s">"transactionManager"</span><span class="o">)</span>
+<span class="nd">@EnableJpaRepositories</span><span class="o">(</span><span class="n">basePackages</span> <span class="o">=</span> <span class="s">"com.at.mul.repository.order"</span><span class="o">,</span> <span class="n">entityManagerFactoryRef</span> <span class="o">=</span> <span class="s">"orderEntityManager"</span><span class="o">,</span> <span class="n">transactionManagerRef</span> <span class="o">=</span> <span class="s">"transactionManager"</span><span class="o">)</span>
+<span class="nd">@EnableConfigurationProperties</span><span class="o">(</span><span class="n">OrderDatasourceProperties</span><span class="o">.</span><span class="na">class</span><span class="o">)</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">OrderConfig</span> <span class="o">{</span>
+
+	<span class="nd">@Autowired</span>
+	<span class="kd">private</span> <span class="n">JpaVendorAdapter</span> <span class="n">jpaVendorAdapter</span><span class="o">;</span>
+
+	<span class="nd">@Autowired</span>
+	<span class="kd">private</span> <span class="n">OrderDatasourceProperties</span> <span class="n">orderDatasourceProperties</span><span class="o">;</span>
+
+	<span class="nd">@Bean</span><span class="o">(</span><span class="n">name</span> <span class="o">=</span> <span class="s">"orderDataSource"</span><span class="o">,</span> <span class="n">initMethod</span> <span class="o">=</span> <span class="s">"init"</span><span class="o">,</span> <span class="n">destroyMethod</span> <span class="o">=</span> <span class="s">"close"</span><span class="o">)</span>
+	<span class="kd">public</span> <span class="n">DataSource</span> <span class="nf">orderDataSource</span><span class="o">()</span> <span class="o">{</span>
+		<span class="n">JdbcDataSource</span> <span class="n">h2XaDataSource</span> <span class="o">=</span> <span class="k">new</span> <span class="n">JdbcDataSource</span><span class="o">();</span>
+		<span class="n">h2XaDataSource</span><span class="o">.</span><span class="na">setURL</span><span class="o">(</span><span class="n">orderDatasourceProperties</span><span class="o">.</span><span class="na">getUrl</span><span class="o">());</span>
+
+		<span class="n">AtomikosDataSourceBean</span> <span class="n">xaDataSource</span> <span class="o">=</span> <span class="k">new</span> <span class="n">AtomikosDataSourceBean</span><span class="o">();</span>
+		<span class="n">xaDataSource</span><span class="o">.</span><span class="na">setXaDataSource</span><span class="o">(</span><span class="n">h2XaDataSource</span><span class="o">);</span>
+		<span class="n">xaDataSource</span><span class="o">.</span><span class="na">setUniqueResourceName</span><span class="o">(</span><span class="s">"xads2"</span><span class="o">);</span>
+		<span class="k">return</span> <span class="n">xaDataSource</span><span class="o">;</span>
+	<span class="o">}</span>
+
+	<span class="nd">@Bean</span><span class="o">(</span><span class="n">name</span> <span class="o">=</span> <span class="s">"orderEntityManager"</span><span class="o">)</span>
+	<span class="kd">public</span> <span class="n">LocalContainerEntityManagerFactoryBean</span> <span class="nf">orderEntityManager</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">Throwable</span> <span class="o">{</span>
+
+		<span class="n">HashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">Object</span><span class="o">&gt;</span> <span class="n">properties</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">Object</span><span class="o">&gt;();</span>
+		<span class="n">properties</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s">"hibernate.transaction.jta.platform"</span><span class="o">,</span> <span class="n">AtomikosJtaPlatform</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getName</span><span class="o">());</span>
+		<span class="n">properties</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s">"javax.persistence.transactionType"</span><span class="o">,</span> <span class="s">"JTA"</span><span class="o">);</span>
+
+		<span class="n">LocalContainerEntityManagerFactoryBean</span> <span class="n">entityManager</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LocalContainerEntityManagerFactoryBean</span><span class="o">();</span>
+		<span class="n">entityManager</span><span class="o">.</span><span class="na">setJtaDataSource</span><span class="o">(</span><span class="n">orderDataSource</span><span class="o">());</span>
+		<span class="n">entityManager</span><span class="o">.</span><span class="na">setJpaVendorAdapter</span><span class="o">(</span><span class="n">jpaVendorAdapter</span><span class="o">);</span>
+		<span class="n">entityManager</span><span class="o">.</span><span class="na">setPackagesToScan</span><span class="o">(</span><span class="s">"com.at.mul.domain.order"</span><span class="o">);</span>
+		<span class="n">entityManager</span><span class="o">.</span><span class="na">setPersistenceUnitName</span><span class="o">(</span><span class="s">"orderPersistenceUnit"</span><span class="o">);</span>
+		<span class="n">entityManager</span><span class="o">.</span><span class="na">setJpaPropertyMap</span><span class="o">(</span><span class="n">properties</span><span class="o">);</span>
+		<span class="k">return</span> <span class="n">entityManager</span><span class="o">;</span>
+	<span class="o">}</span>
+
+<span class="o">}</span></code></pre></figure>
+
+<p>Another important thing here is the definition of the <code>LocalContainerEntityManagerFactoryBean</code>.</p>
+<ul>
+	<li>the <code>@Bean</code> annotation has a given <code>name</code>, that is the one specified in the <code>@EnableJpaRepositories</code> annotation.</li>
+	<li>you need to set some properties to the <code>JpaPropertyMap</code>, in particular you need to say that the transaction type is JTA and that the jta platform is <code>AtomikosJtaPlatform.class.getName()</code></li>
+</ul>
+
+<blockquote>Not setting the second property was the reason why I could not get it work. As Dave Syer wrote "It seems Hibernate4 doesn't work with Atomikos out of the box", so you need to implement the class to be set as <code>hibernate.transaction.jta.platform</code> property by yourself. In my opinion this is not very well documented, but fortunately Oliver Gierke found another <a href="http://stackoverflow.com/questions/20681245/how-to-use-atomikos-transaction-essentials-with-hibernate-4-3/20681497#20681497" target="_blank">StackOverflow discussion</a> about this topic. If you are using another JTA provider, you may find <a href="http://docs.jboss.org/hibernate/orm/4.1/devguide/en-US/html_single/#services-JtaPlatform" target="_blank">this useful</a>.</blockquote>
+
+<h3>Write the AbstractJtaPlatform implementation</h3>
+<p>As said, this is the most important step, as we need to write the implementation of that class by ourselves since Hibernate does not provide it. Here is the resulting code:</p>
+
+<figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="kn">package</span> <span class="n">com</span><span class="o">.</span><span class="na">at</span><span class="o">.</span><span class="na">mul</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">javax.transaction.TransactionManager</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">javax.transaction.UserTransaction</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">org.hibernate.engine.transaction.jta.platform.internal.AbstractJtaPlatform</span><span class="o">;</span>
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">AtomikosJtaPlatform</span> <span class="kd">extends</span> <span class="n">AbstractJtaPlatform</span> <span class="o">{</span>
+
+	<span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">long</span> <span class="n">serialVersionUID</span> <span class="o">=</span> <span class="mi">1L</span><span class="o">;</span>
+
+	<span class="kd">static</span> <span class="n">TransactionManager</span> <span class="n">transactionManager</span><span class="o">;</span>
+	<span class="kd">static</span> <span class="n">UserTransaction</span> <span class="n">transaction</span><span class="o">;</span>
+
+	<span class="nd">@Override</span>
+	<span class="kd">protected</span> <span class="n">TransactionManager</span> <span class="nf">locateTransactionManager</span><span class="o">()</span> <span class="o">{</span>
+		<span class="k">return</span> <span class="n">transactionManager</span><span class="o">;</span>
+	<span class="o">}</span>
+
+	<span class="nd">@Override</span>
+	<span class="kd">protected</span> <span class="n">UserTransaction</span> <span class="nf">locateUserTransaction</span><span class="o">()</span> <span class="o">{</span>
+		<span class="k">return</span> <span class="n">transaction</span><span class="o">;</span>
+	<span class="o">}</span>
+
+<span class="o">}</span></code></pre></figure>
+
+<h3>Write the main configuration class</h3>
+<p>Also in this case it's a pretty standard class, with <code>@EnableTransactionManagement</code> annotation and Atomikos bean definitions. The only <strong>very important</strong> thing to notice is that we need to set <code>AtomikosJtaPlatform.transactionManager</code> and <code>AtomikosJtaPlatform.transaction</code> attributes.</p>
+
+<figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="kn">package</span> <span class="n">com</span><span class="o">.</span><span class="na">at</span><span class="o">.</span><span class="na">mul</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">javax.transaction.TransactionManager</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">javax.transaction.UserTransaction</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">org.springframework.context.annotation.Bean</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.context.annotation.ComponentScan</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.context.annotation.Configuration</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.context.annotation.DependsOn</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.context.support.PropertySourcesPlaceholderConfigurer</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.orm.jpa.JpaVendorAdapter</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.orm.jpa.vendor.Database</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.transaction.PlatformTransactionManager</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.transaction.annotation.EnableTransactionManagement</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.springframework.transaction.jta.JtaTransactionManager</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">com.atomikos.icatch.jta.UserTransactionImp</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">com.atomikos.icatch.jta.UserTransactionManager</span><span class="o">;</span>
+
+<span class="nd">@Configuration</span>
+<span class="nd">@ComponentScan</span>
+<span class="nd">@EnableTransactionManagement</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">MainConfig</span> <span class="o">{</span>
+
+	<span class="nd">@Bean</span>
+	<span class="kd">public</span> <span class="n">PropertySourcesPlaceholderConfigurer</span> <span class="nf">propertySourcesPlaceholderConfigurer</span><span class="o">()</span> <span class="o">{</span>
+		<span class="k">return</span> <span class="k">new</span> <span class="nf">PropertySourcesPlaceholderConfigurer</span><span class="o">();</span>
+	<span class="o">}</span>
+	
+	<span class="nd">@Bean</span>
+	<span class="kd">public</span> <span class="n">JpaVendorAdapter</span> <span class="nf">jpaVendorAdapter</span><span class="o">()</span> <span class="o">{</span>
+		<span class="n">HibernateJpaVendorAdapter</span> <span class="n">hibernateJpaVendorAdapter</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HibernateJpaVendorAdapter</span><span class="o">();</span>
+		<span class="n">hibernateJpaVendorAdapter</span><span class="o">.</span><span class="na">setShowSql</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+		<span class="n">hibernateJpaVendorAdapter</span><span class="o">.</span><span class="na">setGenerateDdl</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+		<span class="n">hibernateJpaVendorAdapter</span><span class="o">.</span><span class="na">setDatabase</span><span class="o">(</span><span class="n">Database</span><span class="o">.</span><span class="na">H2</span><span class="o">);</span>
+		<span class="k">return</span> <span class="n">hibernateJpaVendorAdapter</span><span class="o">;</span>
+	<span class="o">}</span>
+
+	<span class="nd">@Bean</span><span class="o">(</span><span class="n">name</span> <span class="o">=</span> <span class="s">"userTransaction"</span><span class="o">)</span>
+	<span class="kd">public</span> <span class="n">UserTransaction</span> <span class="nf">userTransaction</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">Throwable</span> <span class="o">{</span>
+		<span class="n">UserTransactionImp</span> <span class="n">userTransactionImp</span> <span class="o">=</span> <span class="k">new</span> <span class="n">UserTransactionImp</span><span class="o">();</span>
+		<span class="n">userTransactionImp</span><span class="o">.</span><span class="na">setTransactionTimeout</span><span class="o">(</span><span class="mi">10000</span><span class="o">);</span>
+		<span class="k">return</span> <span class="n">userTransactionImp</span><span class="o">;</span>
+	<span class="o">}</span>
+
+	<span class="nd">@Bean</span><span class="o">(</span><span class="n">name</span> <span class="o">=</span> <span class="s">"atomikosTransactionManager"</span><span class="o">,</span> <span class="n">initMethod</span> <span class="o">=</span> <span class="s">"init"</span><span class="o">,</span> <span class="n">destroyMethod</span> <span class="o">=</span> <span class="s">"close"</span><span class="o">)</span>
+	<span class="kd">public</span> <span class="n">TransactionManager</span> <span class="nf">atomikosTransactionManager</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">Throwable</span> <span class="o">{</span>
+		<span class="n">UserTransactionManager</span> <span class="n">userTransactionManager</span> <span class="o">=</span> <span class="k">new</span> <span class="n">UserTransactionManager</span><span class="o">();</span>
+		<span class="n">userTransactionManager</span><span class="o">.</span><span class="na">setForceShutdown</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
+
+		<span class="n">AtomikosJtaPlatform</span><span class="o">.</span><span class="na">transactionManager</span> <span class="o">=</span> <span class="n">userTransactionManager</span><span class="o">;</span>
+
+		<span class="k">return</span> <span class="n">userTransactionManager</span><span class="o">;</span>
+	<span class="o">}</span>
+
+	<span class="nd">@Bean</span><span class="o">(</span><span class="n">name</span> <span class="o">=</span> <span class="s">"transactionManager"</span><span class="o">)</span>
+	<span class="nd">@DependsOn</span><span class="o">({</span> <span class="s">"userTransaction"</span><span class="o">,</span> <span class="s">"atomikosTransactionManager"</span> <span class="o">})</span>
+	<span class="kd">public</span> <span class="n">PlatformTransactionManager</span> <span class="nf">transactionManager</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">Throwable</span> <span class="o">{</span>
+		<span class="n">UserTransaction</span> <span class="n">userTransaction</span> <span class="o">=</span> <span class="n">userTransaction</span><span class="o">();</span>
+
+		<span class="n">AtomikosJtaPlatform</span><span class="o">.</span><span class="na">transaction</span> <span class="o">=</span> <span class="n">userTransaction</span><span class="o">;</span>
+
+		<span class="n">TransactionManager</span> <span class="n">atomikosTransactionManager</span> <span class="o">=</span> <span class="n">atomikosTransactionManager</span><span class="o">();</span>
+		<span class="k">return</span> <span class="k">new</span> <span class="nf">JtaTransactionManager</span><span class="o">(</span><span class="n">userTransaction</span><span class="o">,</span> <span class="n">atomikosTransactionManager</span><span class="o">);</span>
+	<span class="o">}</span>
+
+<span class="o">}</span></code></pre></figure>
+
+<h3>Resources</h3>
+<div class="row">
+	<div class="col-md-4">
+		<p>Here is the resulting structure of the project:</p>
+		<p><img class="img-thumbnail" alt="Custom order database 2" src="./Fabio Maffioletti _ Distributed transactions with multiple databases, Spring Boot, Spring Data JPA and Atomikos_files/customer-order-databases-2.png"></p>
+	</div>
+	<div class="col-md-8">
+		<p>You can see the full source code here: <a href="https://github.com/fabiomaffioletti/mul-at" target="_blank">https://github.com/fabiomaffioletti/mul-at</a>, The <code>master</code> branch uses in memory database. Checkout branch named <code>mysql-db</code> to use real databases (see <code>application.properties</code> to tweak your database connection data).</p>
+	</div>
+</div>
+
+
+		
+  <div id="disqus_thread" style="margin-top:40px;"><iframe id="dsq-app1" name="dsq-app1" allowtransparency="true" frameborder="0" scrolling="no" tabindex="0" title="Disqus" width="100%" src="./Fabio Maffioletti _ Distributed transactions with multiple databases, Spring Boot, Spring Data JPA and Atomikos_files/saved_resource.html" style="width: 1px !important; min-width: 100% !important; border: none !important; overflow: hidden !important; height: 5904px !important;" horizontalscrolling="no" verticalscrolling="no"></iframe></div>
+  <script type="text/javascript">
+      /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+      var disqus_shortname = 'fabiomaffioletti'; // required: replace example with your forum shortname
+
+      /* * * DON'T EDIT BELOW THIS LINE * * */
+      (function() {
+          var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+          dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      })();
+  </script>
+  <noscript>Please enable JavaScript to view the &lt;a href="http://disqus.com/?ref_noscript"&gt;comments powered by Disqus.&lt;/a&gt;</noscript>
+   
+
+	</div>
+</div>
+      
+    </div>
+
+  
+
+  <script type="text/javascript" src="./Fabio Maffioletti _ Distributed transactions with multiple databases, Spring Boot, Spring Data JPA and Atomikos_files/jquery-2.0.3.min.js.下载"></script><iframe style="display: none;" src="./Fabio Maffioletti _ Distributed transactions with multiple databases, Spring Boot, Spring Data JPA and Atomikos_files/saved_resource(2).html"></iframe>
+  <script type="text/javascript" src="./Fabio Maffioletti _ Distributed transactions with multiple databases, Spring Boot, Spring Data JPA and Atomikos_files/bootstrap.min.js.下载"></script>
+</body></html>
