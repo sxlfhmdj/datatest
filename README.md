@@ -353,6 +353,8 @@ sharding
 事务@Transaction
 - http://blog.csdn.net/moonpure/article/details/53148593
 分布式事务管理
+- https://www.zhihu.com/question/36413559
+高一致情况下，不需要搞缓存
 
 ### 6、笔记
 使用多数据库最好把DataSourceAutoConfiguration屏蔽掉
