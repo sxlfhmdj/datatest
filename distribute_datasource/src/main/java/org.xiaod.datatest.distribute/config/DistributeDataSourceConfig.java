@@ -2,12 +2,13 @@ package org.xiaod.datatest.distribute.config;
 
 import com.atomikos.icatch.jta.UserTransactionImp;
 import com.atomikos.icatch.jta.UserTransactionManager;
+import com.mysql.jdbc.jdbc2.optional.MysqlXADataSource;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceBuilder;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.jta.atomikos.AtomikosDataSourceBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
@@ -16,9 +17,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.jta.JtaTransactionManager;
-import org.xiaod.datatest.distribute.common.datasource.DatabaseType;
-import org.xiaod.datatest.distribute.common.datasource.DynamicDataSource;
-
 import javax.sql.DataSource;
 import javax.transaction.TransactionManager;
 import javax.transaction.UserTransaction;
@@ -33,46 +31,63 @@ import java.util.Map;
  *
  */
 @Configuration
-@MapperScan(basePackages = {"org.xiaod.datatest.dynamic.dao.etrade.iface"}, sqlSessionFactoryRef = "dynamicSqlSessionFactory")
 public class DistributeDataSourceConfig {
 
+    @Autowired
+    EtradeDataProperties etradeDataProperties;
+
+    @Autowired
+    SaleDataProperties saleDataProperties;
+
     @Bean(name = "etradeDataSource")
-    @ConfigurationProperties(prefix = "spring.datasource.etrade")
-    public DataSource etradeDataSource(){
-        return DataSourceBuilder.create().build();
+    @Primary
+    public AtomikosDataSourceBean etradeDataSource(){
+        MysqlXADataSource mysqlXaDataSource = new MysqlXADataSource();
+        mysqlXaDataSource.setUrl(etradeDataProperties.getUrl());
+        mysqlXaDataSource.setPinGlobalTxToPhysicalConnection(true);
+        mysqlXaDataSource.setPassword(etradeDataProperties.getPassword());
+        mysqlXaDataSource.setUser(etradeDataProperties.getUsername());
+        mysqlXaDataSource.setPinGlobalTxToPhysicalConnection(true);
+
+        AtomikosDataSourceBean xaDataSource = new AtomikosDataSourceBean();
+        xaDataSource.setXaDataSource(mysqlXaDataSource);
+        xaDataSource.setUniqueResourceName("etradeDataSource");
+
+        return xaDataSource;
     }
 
     @Bean(name = "saleDataSource")
-    @ConfigurationProperties(prefix = "spring.datasource.sale")
-    public DataSource saleDataSource(){
-        return DataSourceBuilder.create().build();
+    public AtomikosDataSourceBean saleDataSource(){
+        MysqlXADataSource mysqlXaDataSource = new MysqlXADataSource();
+        mysqlXaDataSource.setUrl(saleDataProperties.getUrl());
+        mysqlXaDataSource.setPinGlobalTxToPhysicalConnection(true);
+        mysqlXaDataSource.setPassword(saleDataProperties.getPassword());
+        mysqlXaDataSource.setUser(saleDataProperties.getUsername());
+        mysqlXaDataSource.setPinGlobalTxToPhysicalConnection(true);
+
+        AtomikosDataSourceBean xaDataSource = new AtomikosDataSourceBean();
+        xaDataSource.setXaDataSource(mysqlXaDataSource);
+        xaDataSource.setUniqueResourceName("saleDataSource");
+
+        return xaDataSource;
     }
 
-    @Bean(name = "dynamicDataSource")
-    @Primary
-    public DynamicDataSource dataSource(@Qualifier("etradeDataSource") DataSource etradeDataSource,
-                                        @Qualifier("saleDataSource") DataSource saleDataSource) {
-        Map<Object, Object> targetDataSources = new HashMap<Object, Object>();
-        targetDataSources.put(DatabaseType.etrade, etradeDataSource);
-        targetDataSources.put(DatabaseType.sale, saleDataSource);
 
-        DynamicDataSource dataSource = new DynamicDataSource();
-        dataSource.setTargetDataSources(targetDataSources);// 该方法是AbstractRoutingDataSource的方法
-        dataSource.setDefaultTargetDataSource(etradeDataSource);// 默认的datasource设置为etradeDataSource
-        return dataSource;
-    }
-
-    /**
-     * 根据数据源创建SqlSessionFactory
-     */
-    @Bean(name = "dynamicSqlSessionFactory")
+    @Bean(name = "etradeSqlSessionFactory")
     @Primary
-    public SqlSessionFactory sqlSessionFactory(@Qualifier("dynamicDataSource") DynamicDataSource ds) throws Exception {
+    public SqlSessionFactory etradeSqlSessionFactory(@Qualifier("etradeDataSource") AtomikosDataSourceBean dataSource) throws Exception {
         SqlSessionFactoryBean bean = new SqlSessionFactoryBean();
-        bean.setDataSource(ds);// 指定数据源(这个必须有，否则报错)
-        // 下边两句仅仅用于*.xml文件，如果整个持久层操作不需要使用到xml文件的话（只用注解就可以搞定），则不加
-        Resource[] mapperLocations= new PathMatchingResourcePatternResolver().getResources("classpath:org/xiaod/datatest/dynamic/dao/etrade/xml/*.xml");
+        bean.setDataSource(dataSource);
+        Resource[] mapperLocations= new PathMatchingResourcePatternResolver().getResources("classpath*:org/xiaod/datatest/distribute/dao/etrade/xml/*.xml");
         bean.setMapperLocations(mapperLocations);
+        return bean.getObject();
+    }
+
+    @Bean(name = "saleSqlSessionFactory")
+    public SqlSessionFactory saleSqlSessionFactory(@Qualifier("saleDataSource") AtomikosDataSourceBean dataSource) throws Exception {
+        SqlSessionFactoryBean bean = new SqlSessionFactoryBean();
+        bean.setDataSource(dataSource);
+        bean.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:org/xiaod/datatest/distribute/dao/sale/xml/*.xml"));
         return bean.getObject();
     }
 
